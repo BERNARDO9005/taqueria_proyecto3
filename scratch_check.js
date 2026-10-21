@@ -1,16 +1,11 @@
 const fs = require('fs');
-const readline = require('readline');
+const html = fs.readFileSync('index.html', 'utf8');
 
-async function main() {
-  const fileStream = fs.createReadStream('C:\\Users\\Usuario\\.gemini\\antigravity-cli\\brain\\4cfe8f36-d8a9-485c-a391-2febc2a78db6\\.system_generated\\logs\\transcript_full.jsonl');
-  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
-  let idx = 0;
-  for await (const line of rl) {
-    if (idx === 4) {
-      console.log('Step 4 line:', line);
-      break;
-    }
-    idx++;
-  }
-}
-main();
+const head = html.slice(0, html.indexOf('<body'));
+const bodyHtml = html.slice(html.indexOf('<body'), html.indexOf('<script>'));
+const script = html.slice(html.indexOf('<script>'));
+
+console.log('Head len:', head.length);
+console.log('Body HTML len:', bodyHtml.length);
+console.log('Script len:', script.length);
+console.log('Total len:', html.length);
