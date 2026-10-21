@@ -1,9 +1,10 @@
 const fs = require('fs');
 const html = fs.readFileSync('index.html', 'utf8');
 
+const lastScriptIdx = html.lastIndexOf('<script');
 const head = html.slice(0, html.indexOf('<body'));
-const bodyHtml = html.slice(html.indexOf('<body'), html.indexOf('<script>'));
-const script = html.slice(html.indexOf('<script>'));
+const bodyHtml = html.slice(html.indexOf('<body'), lastScriptIdx);
+const script = html.slice(lastScriptIdx);
 
 console.log('Head len:', head.length);
 console.log('Body HTML len:', bodyHtml.length);
