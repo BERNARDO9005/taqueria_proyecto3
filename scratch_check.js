@@ -8,9 +8,8 @@ async function main() {
   for await (const line of rl) {
     if (idx === 3) {
       const data = JSON.parse(line);
-      console.log('Keys on step 3:', Object.keys(data));
-      if (data.thinking) console.log('Thinking len:', data.thinking.length);
-      if (data.tool_calls) console.log('Tool calls count:', data.tool_calls.length);
+      console.log('Thinking end:');
+      console.log(data.thinking.slice(-500));
       break;
     }
     idx++;
