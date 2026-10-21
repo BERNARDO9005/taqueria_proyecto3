@@ -6,10 +6,8 @@ async function main() {
   const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
   let idx = 0;
   for await (const line of rl) {
-    if (idx === 3) {
-      const data = JSON.parse(line);
-      console.log('Thinking end:');
-      console.log(data.thinking.slice(-500));
+    if (idx === 4) {
+      console.log('Step 4 line:', line);
       break;
     }
     idx++;
