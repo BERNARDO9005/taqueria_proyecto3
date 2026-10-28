@@ -1,0 +1,21 @@
+========================================================================
+CARPETA DE IMÁGENES LOCALES - TAQUERÍA EL BUEN TAQUITO
+========================================================================
+
+Tienes dos formas súper fáciles de usar tus propias fotos en la taquería:
+
+1. SUBIR DIRECTAMENTE DESDE EL PANEL DE ADMINISTRACIÓN (MÁS FÁCIL):
+   - En la página web, haz clic en el botón de engrane (⚙️) arriba a la derecha.
+   - Ingresa el PIN: 1234
+   - Ve a la pestaña "Platillos y Precios".
+   - Al editar o agregar un platillo, haz clic en:
+     "📁 Subir foto de mi local"
+   - Selecciona cualquier foto desde tu computadora o celular. ¡Y listo! Se guarda automáticamente.
+
+2. COLOCAR ARCHIVOS EN ESTA CARPETA:
+   - Copia tus fotos (en formato .jpg o .png) dentro de esta carpeta (C:\taqueria_proyecto3\imagenes).
+   - Por ejemplo, guarda un archivo llamado: taco_pastor.jpg
+   - En el panel de administración, en el campo de enlace de imagen, escribe:
+     imagenes/taco_pastor.jpg
+   - ¡Y aparecerá de inmediato en tu menú!
+========================================================================
