@@ -1,0 +1,2133 @@
+const fs = require('fs');
+
+const finalHtml = `<!DOCTYPE html>
+<html lang="es-MX" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Taquería El Buen Taquito</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'bg-page': '#0f172a', 'bg-surface': '#172554', 'bg-card': '#1e293b',
+            primary: '#2563eb', 'primary-hover': '#1d4ed8', accent: '#0ea5e9',
+            gold: '#fbbf24', 'gold-strong': '#f59e0b', text: '#f1f5f9',
+            'text-muted': '#94a3b8', success: '#22c55e', error: '#ef4444'
+          },
+          fontFamily: { sans: ['Inter', 'sans-serif'] }
+        }
+      }
+    };
+  </script>
+  <style>
+    @media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
+    .no-sb::-webkit-scrollbar { display: none; }
+    .no-sb { -ms-overflow-style: none; scrollbar-width: none; }
+    body.modal-open { overflow: hidden; }
+    .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
+    .in-fld { width: 100%; padding: 0.45rem 0.75rem; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem; color: #f1f5f9; font-size: 0.75rem; outline: none; transition: border-color 0.2s; }
+    .in-fld:focus { border-color: #0ea5e9; }
+    .btn-p { display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem; padding: 0.5rem 0.85rem; border-radius: 0.75rem; background: #2563eb; color: #fff; font-weight: 700; font-size: 0.75rem; transition: background 0.2s; cursor: pointer; }
+    .btn-p:hover { background: #1d4ed8; }
+    .btn-p:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
+  </style>
+</head>
+<body class="bg-bg-page text-text font-sans antialiased min-h-screen flex flex-col selection:bg-accent selection:text-white">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-bg-surface/90 glass border-b border-white/10">
+    <div class="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
+      <a href="#hero" class="flex items-center gap-2 group p-1 focus:outline-none focus:ring-2 focus:ring-accent rounded-xl">
+        <div class="w-9 h-9 rounded-full bg-gold/20 border border-gold/40 flex items-center justify-center text-gold text-base group-hover:scale-105 transition-transform"><i class="fa-solid fa-fire-burner"></i></div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="brand-name" class="text-sm sm:text-base font-bold text-white tracking-tight">El Buen Taquito</span>
+            <span id="badge-status" class="text-[10px] px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1"></span>
+          </div>
+          <p id="brand-tagline" class="text-[10px] text-text-muted hidden sm:block">Sabor de la calle, directo a tu casa</p>
+        </div>
+      </a>
+      <div class="flex-1 max-w-xs sm:max-w-md mx-2">
+        <div class="relative w-full">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-xs"></i>
+          <input type="text" id="input-search" placeholder="Buscar tacos, gringas, bebidas..." class="w-full pl-8 pr-3 py-1.5 bg-bg-card/80 border border-white/10 rounded-full text-xs text-text placeholder-text-muted focus:outline-none focus:border-accent">
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-admin" class="relative w-8 h-8 rounded-full bg-bg-card/70 hover:bg-bg-card border border-white/10 flex items-center justify-center text-text-muted hover:text-white transition-colors" title="Administrar Menú y Local (PIN: 1234)">
+          <i class="fa-solid fa-gear text-xs"></i>
+          <span id="admin-indicator-dot" class="hidden absolute top-0 right-0 w-2 h-2 rounded-full bg-gold animate-ping"></span>
+        </button>
+        <button id="btn-open-cart" class="relative px-3 py-1.5 rounded-full bg-primary hover:bg-primary-hover border border-white/10 flex items-center gap-1.5 text-xs font-semibold text-white shadow active:scale-95 transition-transform">
+          <i class="fa-solid fa-basket-shopping text-xs"></i>
+          <span class="hidden sm:inline">Carrito</span>
+          <span id="cart-counter" class="bg-gold text-slate-950 text-[10px] font-bold px-1.5 py-0.2 rounded-full min-w-[16px] text-center">0</span>
+        </button>
+      </div>
+    </div>
+    <nav class="bg-bg-surface/95 border-t border-white/5 py-1.5 px-4 shadow-sm glass" aria-label="Categorías">
+      <div class="max-w-6xl mx-auto flex items-center gap-2 overflow-x-auto no-sb" id="category-chips"></div>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 py-5 space-y-8" id="main-content">
+    <section id="hero" class="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-bg-card" aria-roledescription="carousel" aria-label="Promociones">
+      <div class="relative h-48 sm:h-64 md:h-72 w-full overflow-hidden select-none" id="carousel-track"></div>
+      <button id="carousel-prev" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/60 hover:bg-slate-900/90 backdrop-blur-sm text-white flex items-center justify-center border border-white/10 active:scale-95 transition-transform" aria-label="Anterior"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+      <button id="carousel-next" class="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-900/60 hover:bg-slate-900/90 backdrop-blur-sm text-white flex items-center justify-center border border-white/10 active:scale-95 transition-transform" aria-label="Siguiente"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+      <div class="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-slate-950/50 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10" id="carousel-indicators"></div>
+    </section>
+    <div id="menu-container" class="space-y-8"></div>
+    <div id="tracker-banner" class="hidden fixed bottom-4 right-4 sm:right-6 sm:w-88 z-30">
+      <div class="bg-bg-surface/95 glass border border-accent/40 rounded-2xl p-3 shadow-2xl flex items-center justify-between gap-3 text-white">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center text-accent animate-pulse"><i class="fa-solid fa-clock text-xs"></i></div>
+          <div class="min-w-0">
+            <p class="text-[9px] font-bold text-accent uppercase tracking-wider">Pedido Activo</p>
+            <p id="tracker-banner-title" class="text-xs font-bold text-white truncate">Cargando...</p>
+          </div>
+        </div>
+        <button id="btn-open-tracker" class="px-2.5 py-1 rounded-xl bg-accent hover:bg-sky-400 text-slate-950 font-bold text-xs transition-colors shrink-0">Rastrear</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-bg-surface border-t border-white/10 mt-12 py-6 text-text-muted text-xs">
+    <div class="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div>
+        <div class="flex items-center gap-2 mb-1.5"><i class="fa-solid fa-fire-burner text-gold text-base"></i><span id="footer-brand" class="font-bold text-white text-sm">Taquería El Buen Taquito</span></div>
+        <p id="footer-tagline" class="leading-relaxed">Sabor de la calle directo a tu casa. Todo preparado al momento con sazón tradicional.</p>
+      </div>
+      <div>
+        <h4 class="font-bold text-white mb-1.5 uppercase tracking-wider text-[11px]">Sucursal & Horarios</h4>
+        <p id="footer-hours" class="mb-1"><i class="fa-regular fa-clock mr-1 text-gold"></i> Lun - Dom: 1:00 PM a 11:00 PM</p>
+        <p id="footer-address" class="mb-1"><i class="fa-solid fa-location-dot mr-1 text-gold"></i> Av. Revolución 456, Col. Escandón, CDMX</p>
+        <p id="footer-phone"><i class="fa-solid fa-phone mr-1 text-gold"></i> 55 1234 5678</p>
+      </div>
+      <div>
+        <h4 class="font-bold text-white mb-1.5 uppercase tracking-wider text-[11px]">Contacto & Redes</h4>
+        <p class="leading-relaxed mb-2">Simulación interactiva single-page con look DiDi Food / Rappi. Modifica productos, precios y fotos en el Admin.</p>
+        <div class="flex items-center gap-3 text-base">
+          <a href="#" class="hover:text-gold" aria-label="Facebook"><i class="fa-brands fa-facebook"></i></a>
+          <a href="#" class="hover:text-gold" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+          <a href="#" id="footer-whatsapp" class="hover:text-gold hidden" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+        </div>
+      </div>
+    </div>
+    <div class="max-w-6xl mx-auto px-4 pt-4 mt-4 border-t border-white/5 text-center text-text-muted/70 text-[11px]">&copy; 2026 <span id="copyright-brand">Taquería El Buen Taquito</span>. Todos los derechos reservados.</div>
+  </footer>
+
+  <!-- Overlays -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-1.5 pointer-events-none" aria-live="polite"></div>
+
+  <!-- Custom Dialog -->
+  <div id="custom-dialog" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm" role="dialog" aria-modal="true">
+    <div class="bg-bg-card border border-white/10 rounded-2xl p-5 max-w-xs w-full text-center space-y-3 shadow-2xl">
+      <div class="w-10 h-10 mx-auto rounded-full bg-gold/20 text-gold flex items-center justify-center text-lg"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <h3 id="dialog-title" class="text-sm font-bold text-white">¿Estás seguro?</h3>
+      <p id="dialog-message" class="text-xs text-text-muted"></p>
+      <div class="flex items-center justify-center gap-2 pt-1">
+        <button id="dialog-cancel" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-text-muted text-xs font-semibold">Cancelar</button>
+        <button id="dialog-confirm" class="btn-p">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customizer Modal -->
+  <div id="modal-customizer" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center bg-slate-950/80 backdrop-blur-sm" role="dialog" aria-modal="true">
+    <div class="bg-bg-card border-t sm:border border-white/10 w-full sm:max-w-md max-h-[88vh] rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div class="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-bg-surface/80">
+        <div>
+          <h2 id="customizer-title" class="text-sm font-bold text-white leading-tight">Personalizar</h2>
+          <p id="customizer-base-price" class="text-xs text-gold font-semibold">$0.00 base</p>
+        </div>
+        <button id="btn-close-customizer" class="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 text-text-muted hover:text-white flex items-center justify-center"><i class="fa-solid fa-xmark text-xs"></i></button>
+      </div>
+      <div class="p-4 overflow-y-auto space-y-3.5 flex-1 text-xs" id="customizer-body"></div>
+      <div class="p-3.5 border-t border-white/10 bg-bg-surface/90 glass flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2 bg-bg-card border border-white/10 rounded-xl px-2 py-1">
+          <button id="btn-qty-minus" class="w-6 h-6 rounded bg-white/5 hover:bg-white/10 text-white flex items-center justify-center font-bold text-xs">-</button>
+          <span id="customizer-qty" class="w-5 text-center font-bold text-xs text-white">1</span>
+          <button id="btn-qty-plus" class="w-6 h-6 rounded bg-white/5 hover:bg-white/10 text-white flex items-center justify-center font-bold text-xs">+</button>
+        </div>
+        <button id="btn-customizer-submit" class="flex-1 btn-p justify-between py-2.5 px-3.5">
+          <span id="customizer-submit-text">Agregar</span>
+          <span id="customizer-live-total" class="font-extrabold text-white text-xs">$0.00</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide-over Cart Drawer -->
+  <div id="slideover-cart" class="fixed inset-0 z-50 hidden flex justify-end bg-slate-950/70 backdrop-blur-sm" role="dialog" aria-modal="true">
+    <div class="bg-bg-card border-l border-white/10 w-full sm:max-w-md h-full flex flex-col shadow-2xl">
+      <div class="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-bg-surface/80">
+        <div class="flex items-center gap-2"><i class="fa-solid fa-basket-shopping text-accent text-xs"></i><h2 class="text-sm font-bold text-white">Tu Pedido</h2></div>
+        <div class="flex items-center gap-2">
+          <button id="btn-clear-cart" class="text-xs text-error hover:text-red-400 font-medium px-2 py-0.5 rounded hover:bg-white/5 hidden">Vaciar</button>
+          <button id="btn-close-cart" class="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 text-text-muted hover:text-white flex items-center justify-center"><i class="fa-solid fa-xmark text-xs"></i></button>
+        </div>
+      </div>
+      <div class="flex-1 overflow-y-auto p-3.5 space-y-2.5" id="cart-items-container"></div>
+      <div class="p-3.5 border-t border-white/10 bg-bg-surface/95 glass space-y-2.5" id="cart-footer">
+        <div class="space-y-1 text-xs">
+          <div class="flex justify-between text-text-muted"><span>Subtotal</span><span id="cart-subtotal" class="text-white font-medium">$0.00</span></div>
+          <div class="flex justify-between text-text-muted"><span id="cart-delivery-label">Costo de envío</span><span id="cart-delivery-fee" class="text-white font-medium">$25.00</span></div>
+          <div class="flex justify-between text-xs font-bold text-white pt-1.5 border-t border-white/10"><span>Total</span><span id="cart-total" class="text-gold text-sm">$0.00</span></div>
+        </div>
+        <button id="btn-start-checkout" class="w-full btn-p py-2.5 text-xs">
+          <span>Continuar con la Entrega</span><i class="fa-solid fa-arrow-right text-[10px]"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Checkout Modal -->
+  <div id="modal-checkout" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-sm" role="dialog" aria-modal="true">
+    <div class="bg-bg-card border border-white/10 w-full max-w-md max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-xs">
+      <div class="px-4 py-2.5 border-b border-white/10 bg-bg-surface/90 flex items-center justify-between">
+        <div><h2 class="text-xs font-bold text-white">Finalizar Compra</h2><p id="checkout-step-indicator" class="text-[10px] text-text-muted">Paso 1 de 2: Entrega</p></div>
+        <button id="btn-close-checkout" class="w-6 h-6 rounded-full bg-white/5 hover:bg-white/10 text-text-muted hover:text-white flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-3.5 space-y-3" id="checkout-body">
+        <!-- Step 1: Delivery -->
+        <div id="step-delivery" class="space-y-2.5">
+          <div class="grid grid-cols-2 gap-1.5 bg-bg-page/70 p-1 rounded-xl border border-white/10">
+            <button type="button" id="type-delivery" class="py-1.5 rounded-lg font-bold bg-primary text-white flex items-center justify-center gap-1 shadow"><i class="fa-solid fa-motorcycle text-xs"></i> A Domicilio</button>
+            <button type="button" id="type-pickup" class="py-1.5 rounded-lg font-semibold text-text-muted hover:text-white flex items-center justify-center gap-1"><i class="fa-solid fa-store text-xs"></i> Recoger en Tienda</button>
+          </div>
+          <div id="pickup-info" class="hidden p-2.5 rounded-xl bg-accent/10 border border-accent/20 text-accent space-y-0.5 text-[11px]">
+            <p class="font-bold"><i class="fa-solid fa-location-dot mr-1"></i> Sucursal para recoger:</p>
+            <p id="pickup-store-address" class="text-white font-medium"></p>
+            <p class="text-[10px] text-text-muted">* Sin costo de envío.</p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label for="del-name" class="block font-medium text-text-muted mb-0.5 text-[11px]">Nombre completo *</label>
+              <input type="text" id="del-name" placeholder="Tu nombre" class="in-fld">
+              <p id="err-del-name" class="text-error text-[10px] hidden"></p>
+            </div>
+            <div>
+              <label for="del-phone" class="block font-medium text-text-muted mb-0.5 text-[11px]">Teléfono (10 dígitos) *</label>
+              <input type="tel" id="del-phone" maxlength="10" placeholder="5512345678" class="in-fld">
+              <p id="err-del-phone" class="text-error text-[10px] hidden"></p>
+            </div>
+          </div>
+          <div id="delivery-address-section" class="space-y-2 pt-1 border-t border-white/5">
+            <button type="button" id="btn-use-gps" class="w-full py-1.5 px-3 rounded-xl bg-bg-surface hover:bg-slate-800 border border-accent/40 text-accent font-semibold flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-location-crosshairs text-xs"></i><span id="gps-btn-label">Usar mi ubicación actual (GPS)</span>
+            </button>
+            <div id="gps-status" class="hidden p-1.5 rounded-lg border text-[10px]"></div>
+            <div class="grid grid-cols-3 gap-2">
+              <div class="col-span-2">
+                <label for="del-street" class="block font-medium text-text-muted mb-0.5 text-[11px]">Calle *</label>
+                <input type="text" id="del-street" placeholder="Av. Revolución" class="in-fld">
+                <p id="err-del-street" class="text-error text-[10px] hidden"></p>
+              </div>
+              <div>
+                <label for="del-num-ext" class="block font-medium text-text-muted mb-0.5 text-[11px]">No. Ext *</label>
+                <input type="text" id="del-num-ext" placeholder="123" class="in-fld">
+                <p id="err-del-num-ext" class="text-error text-[10px] hidden"></p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label for="del-num-int" class="block font-medium text-text-muted mb-0.5 text-[11px]">No. Int (Opcional)</label>
+                <input type="text" id="del-num-int" placeholder="Depto 4B" class="in-fld">
+              </div>
+              <div>
+                <label for="del-colonia" class="block font-medium text-text-muted mb-0.5 text-[11px]">Colonia *</label>
+                <input type="text" id="del-colonia" placeholder="Escandón" class="in-fld">
+                <p id="err-del-colonia" class="text-error text-[10px] hidden"></p>
+              </div>
+            </div>
+            <div>
+              <label for="del-notes" class="block font-medium text-text-muted mb-0.5 text-[11px]">Referencias de entrega</label>
+              <textarea id="del-notes" rows="2" maxlength="200" placeholder="Ej. Fachada gris, portón de madera..." class="in-fld resize-none"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Payment -->
+        <div id="step-payment" class="space-y-2.5 hidden">
+          <div class="grid grid-cols-2 gap-1.5 bg-bg-page/70 p-1 rounded-xl border border-white/10">
+            <button type="button" id="pay-method-card" class="py-1.5 rounded-lg font-bold bg-primary text-white flex items-center justify-center gap-1 shadow"><i class="fa-solid fa-credit-card text-xs"></i> Tarjeta</button>
+            <button type="button" id="pay-method-cash" class="py-1.5 rounded-lg font-semibold text-text-muted hover:text-white flex items-center justify-center gap-1"><i class="fa-solid fa-money-bill-wave text-xs"></i> Efectivo</button>
+          </div>
+          <div class="p-2 bg-bg-surface/60 rounded-xl border border-white/10 flex items-center justify-between text-xs">
+            <span class="text-text-muted">Total a pagar:</span><span id="checkout-pay-total" class="text-gold font-extrabold text-sm">$0.00</span>
+          </div>
+          <div id="payment-card-form" class="space-y-2">
+            <p class="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px]"><i class="fa-solid fa-circle-info mr-1"></i> Simulación: no se procesan pagos reales.</p>
+            <div>
+              <label for="card-number" class="block font-medium text-text-muted mb-0.5 text-[11px]">Número de tarjeta *</label>
+              <input type="text" id="card-number" maxlength="19" placeholder="4000 1234 5678 9010" class="in-fld font-mono">
+              <p id="err-card-number" class="text-error text-[10px] hidden"></p>
+              <p class="text-[9px] text-text-muted mt-0.5">Tip declinada: <span class="text-gold font-mono">4000 0000 0000 0002</span></p>
+            </div>
+            <div>
+              <label for="card-holder" class="block font-medium text-text-muted mb-0.5 text-[11px]">Titular *</label>
+              <input type="text" id="card-holder" placeholder="Como figura en la tarjeta" class="in-fld">
+              <p id="err-card-holder" class="text-error text-[10px] hidden"></p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label for="card-expiry" class="block font-medium text-text-muted mb-0.5 text-[11px]">Vencimiento (MM/AA) *</label>
+                <input type="text" id="card-expiry" maxlength="5" placeholder="12/28" class="in-fld font-mono">
+                <p id="err-card-expiry" class="text-error text-[10px] hidden"></p>
+              </div>
+              <div>
+                <label for="card-cvv" class="block font-medium text-text-muted mb-0.5 text-[11px]">CVV *</label>
+                <input type="password" id="card-cvv" maxlength="4" placeholder="123" class="in-fld font-mono">
+                <p id="err-card-cvv" class="text-error text-[10px] hidden"></p>
+              </div>
+            </div>
+          </div>
+          <div id="payment-cash-form" class="space-y-2 hidden">
+            <div>
+              <label for="cash-amount" class="block font-medium text-text-muted mb-0.5 text-[11px]">¿Con cuánto pagas? *</label>
+              <input type="number" id="cash-amount" step="1" min="0" placeholder="0" class="in-fld font-bold">
+              <p id="err-cash-amount" class="text-error text-[10px] hidden"></p>
+            </div>
+            <div class="grid grid-cols-4 gap-1" id="quick-cash-buttons">
+              <button type="button" data-val="exact" class="py-1 rounded bg-bg-surface hover:bg-slate-700 text-white font-semibold border border-white/10 text-[11px]">Exacto</button>
+              <button type="button" data-val="100" class="py-1 rounded bg-bg-surface hover:bg-slate-700 text-white font-semibold border border-white/10 text-[11px]">$100</button>
+              <button type="button" data-val="200" class="py-1 rounded bg-bg-surface hover:bg-slate-700 text-white font-semibold border border-white/10 text-[11px]">$200</button>
+              <button type="button" data-val="500" class="py-1 rounded bg-bg-surface hover:bg-slate-700 text-white font-semibold border border-white/10 text-[11px]">$500</button>
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-between">
+              <div><span class="text-[10px] text-text-muted block">Tu cambio:</span><span id="cash-change-text" class="text-sm font-bold text-success">$0.00</span></div>
+              <i class="fa-solid fa-hand-holding-dollar text-lg text-success/60"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="px-4 py-2.5 border-t border-white/10 bg-bg-surface/90 flex items-center justify-between gap-2">
+        <button id="btn-checkout-back" class="hidden px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-text-muted hover:text-white font-semibold text-xs border border-white/10">Atrás</button>
+        <button id="btn-checkout-next" class="flex-1 btn-p">
+          <span>Ir a Forma de Pago</span><i class="fa-solid fa-arrow-right text-[10px]"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tracker Modal -->
+  <div id="modal-tracker" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-sm" role="dialog" aria-modal="true">
+    <div class="bg-bg-card border border-white/10 w-full max-w-md max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-xs">
+      <div class="px-4 py-2.5 border-b border-white/10 bg-bg-surface/90 flex items-center justify-between">
+        <div><span class="text-[9px] text-accent font-bold uppercase tracking-wider">Rastreador en vivo</span><h2 id="tracker-order-id" class="text-xs font-bold text-white">TBT-0000</h2></div>
+        <button id="btn-close-tracker" class="w-6 h-6 rounded-full bg-white/5 hover:bg-white/10 text-text-muted hover:text-white flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-3.5 space-y-3">
+        <div class="p-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[10px] flex items-center justify-between">
+          <span><i class="fa-solid fa-info-circle mr-1"></i> Demo: el estado avanza automáticamente.</span>
+          <span id="tracker-elapsed" class="font-mono font-bold text-white">0s</span>
+        </div>
+        <div class="space-y-2.5" id="tracker-timeline">
+          <div class="timeline-step flex items-start gap-2.5" data-stage="1">
+            <div class="step-icon w-7 h-7 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-bold text-text-muted text-xs">
+              <i class="fa-solid fa-check hidden text-[10px]"></i><span class="num text-[11px]">1</span>
+            </div>
+            <div class="pt-0.5 flex-1"><h4 class="font-bold text-text-muted step-title">Pedido Recibido / Confirmado</h4><p class="text-[10px] text-text-muted">La cocina recibió tu orden.</p></div>
+          </div>
+          <div class="timeline-step flex items-start gap-2.5" data-stage="2">
+            <div class="step-icon w-7 h-7 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-bold text-text-muted text-xs">
+              <i class="fa-solid fa-check hidden text-[10px]"></i><span class="num text-[11px]">2</span>
+            </div>
+            <div class="pt-0.5 flex-1"><h4 class="font-bold text-text-muted step-title">En el Comal / Preparando</h4><p class="text-[10px] text-text-muted">Asando carne y calentando tortillas.</p></div>
+          </div>
+          <div class="timeline-step flex items-start gap-2.5" data-stage="3">
+            <div class="step-icon w-7 h-7 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-bold text-text-muted text-xs">
+              <i class="fa-solid fa-check hidden text-[10px]"></i><span class="num text-[11px]">3</span>
+            </div>
+            <div class="pt-0.5 flex-1"><h4 class="font-bold text-text-muted step-title" id="stage-3-title">En Camino</h4><p class="text-[10px] text-text-muted" id="stage-3-desc">El repartidor va hacia ti.</p></div>
+          </div>
+          <div class="timeline-step flex items-start gap-2.5" data-stage="4">
+            <div class="step-icon w-7 h-7 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-bold text-text-muted text-xs">
+              <i class="fa-solid fa-check hidden text-[10px]"></i><span class="num text-[11px]">4</span>
+            </div>
+            <div class="pt-0.5 flex-1"><h4 class="font-bold text-text-muted step-title">Entregado</h4><p class="text-[10px] text-text-muted">¡Buen provecho!</p></div>
+          </div>
+        </div>
+        <div class="p-2.5 bg-bg-surface/50 rounded-xl border border-white/10 space-y-1 text-[10px]">
+          <div class="flex justify-between"><span class="text-text-muted">Tipo:</span><span id="tracker-type" class="font-bold text-white"></span></div>
+          <div class="flex justify-between"><span class="text-text-muted">Destino:</span><span id="tracker-destination" class="font-medium text-white max-w-[200px] truncate text-right"></span></div>
+          <div class="flex justify-between"><span class="text-text-muted">Pago:</span><span id="tracker-payment" class="font-medium text-white"></span></div>
+          <div class="flex justify-between border-t border-white/10 pt-1 font-bold text-xs"><span>Total:</span><span id="tracker-total" class="text-gold"></span></div>
+        </div>
+        <div class="space-y-1.5">
+          <a id="btn-maps-link" href="#" target="_blank" rel="noopener noreferrer" class="w-full py-1.5 px-3 rounded-xl bg-bg-surface hover:bg-slate-800 border border-white/10 text-accent font-semibold flex items-center justify-center gap-1.5"><i class="fa-solid fa-map-location-dot"></i> Ver en Google Maps</a>
+          <a id="btn-whatsapp-order" href="#" target="_blank" rel="noopener noreferrer" class="w-full py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center justify-center gap-1.5 hidden"><i class="fa-brands fa-whatsapp"></i> Enviar por WhatsApp</a>
+          <button id="btn-new-order" class="w-full btn-p"><i class="fa-solid fa-rotate-right"></i> Hacer otro pedido</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Modal (Full Menu & Store Management) -->
+  <div id="modal-admin" class="fixed inset-0 z-50 hidden flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/85 backdrop-blur-sm" role="dialog" aria-modal="true">
+    <div class="bg-bg-card border border-white/10 w-full max-w-2xl max-h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-xs">
+      <!-- Admin Header -->
+      <div class="px-4 py-2.5 border-b border-white/10 bg-bg-surface/90 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-gold/20 text-gold flex items-center justify-center font-bold text-xs"><i class="fa-solid fa-store"></i></div>
+          <div>
+            <h2 class="text-xs sm:text-sm font-bold text-white">Panel de Administración del Local</h2>
+            <p class="text-[10px] text-text-muted">Gestiona platillos, fotos de tu local, precios y datos</p>
+          </div>
+        </div>
+        <button id="btn-close-admin" class="w-6 h-6 rounded-full bg-white/5 hover:bg-white/10 text-text-muted hover:text-white flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
+      </div>
+
+      <!-- PIN View -->
+      <div id="admin-pin-view" class="p-8 text-center space-y-3 my-auto">
+        <div class="w-12 h-12 mx-auto rounded-full bg-gold/20 text-gold flex items-center justify-center text-xl"><i class="fa-solid fa-lock"></i></div>
+        <div>
+          <h3 class="text-sm font-bold text-white">Acceso Administrativo</h3>
+          <p class="text-[11px] text-text-muted">Ingresa el PIN de seguridad (por defecto: <span class="font-mono text-gold font-bold">1234</span>).</p>
+        </div>
+        <div class="max-w-xs mx-auto space-y-2">
+          <input type="password" id="admin-pin-input" maxlength="6" placeholder="PIN (1234)" class="in-fld text-center text-base font-mono tracking-widest py-2">
+          <p id="admin-pin-error" class="text-error text-[10px] hidden"><i class="fa-solid fa-circle-xmark mr-1"></i>PIN incorrecto. Intenta de nuevo.</p>
+          <button id="btn-verify-pin" class="w-full btn-p py-2">Desbloquear Panel</button>
+        </div>
+      </div>
+
+      <!-- Admin Main Content View -->
+      <div id="admin-content-view" class="hidden flex-1 overflow-y-auto p-3.5 space-y-3">
+        <!-- Tabs Bar -->
+        <div class="flex border-b border-white/10 gap-2 font-semibold text-xs pb-1">
+          <button type="button" id="tab-btn-catalog" class="px-2.5 py-1.5 rounded-lg border-b-2 border-primary text-white flex items-center gap-1.5"><i class="fa-solid fa-utensils text-xs"></i> Platillos y Precios</button>
+          <button type="button" id="tab-btn-carousel" class="px-2.5 py-1.5 rounded-lg border-b-2 border-transparent text-text-muted hover:text-white flex items-center gap-1.5"><i class="fa-solid fa-images text-xs"></i> Banners / Carrusel</button>
+          <button type="button" id="tab-btn-settings" class="px-2.5 py-1.5 rounded-lg border-b-2 border-transparent text-text-muted hover:text-white flex items-center gap-1.5"><i class="fa-solid fa-sliders text-xs"></i> Datos del Local</button>
+        </div>
+
+        <!-- TAB 1: Platillos y Precios -->
+        <div id="tab-view-catalog" class="space-y-3">
+          <!-- Toolbar -->
+          <div class="p-2.5 bg-bg-surface/60 rounded-xl border border-white/10 space-y-2">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5 flex-1 min-w-0">
+                <div class="relative flex-1">
+                  <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted text-[10px]"></i>
+                  <input type="text" id="admin-search-dish" placeholder="Filtrar platillos..." class="in-fld pl-7 py-1 text-xs w-full">
+                </div>
+                <select id="admin-filter-cat" class="in-fld py-1 text-xs w-auto">
+                  <option value="all">Todas las categorías</option>
+                </select>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <button type="button" id="btn-open-add-dish" class="btn-p py-1.5 px-3 text-xs shadow-md"><i class="fa-solid fa-plus text-[10px]"></i> + Nuevo Platillo</button>
+                <button type="button" id="btn-reset-entire-menu" class="px-2 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-gold text-xs font-semibold border border-white/10" title="Restablecer al menú por defecto"><i class="fa-solid fa-rotate-left mr-1"></i>Reset</button>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 text-[10px] text-accent/90 bg-accent/10 border border-accent/20 px-2.5 py-1.5 rounded-lg">
+              <i class="fa-solid fa-circle-info shrink-0 text-accent"></i>
+              <span><b>Fotos de tu local:</b> Haz clic en el icono de cámara en cualquier platillo para subir tu propia foto, o coloca archivos en <code class="text-gold font-mono">imagenes/</code>.</span>
+            </div>
+          </div>
+
+          <!-- Catalog List Container -->
+          <div id="admin-catalog-list" class="space-y-2"></div>
+        </div>
+
+        <!-- TAB 2: Banners / Carrusel -->
+        <div id="tab-view-carousel" class="space-y-2.5 hidden">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-text-muted uppercase text-[9px]">Diapositivas Activas</span>
+            <button id="btn-reset-carousel-defaults" class="text-gold hover:underline text-[10px]">Restaurar slides originales</button>
+          </div>
+          <div id="admin-carousel-list" class="space-y-1.5"></div>
+          <div class="p-2.5 rounded-xl bg-bg-surface/50 border border-white/10 space-y-2">
+            <h5 class="font-bold text-white text-[11px]"><i class="fa-solid fa-plus-circle text-gold mr-1"></i> Agregar Nueva Diapositiva</h5>
+            <div class="grid grid-cols-2 gap-1.5">
+              <input type="text" id="new-slide-title" placeholder="Título (ej. ¡Tacos de Trompo!)" class="in-fld">
+              <input type="text" id="new-slide-subtitle" placeholder="Subtítulo o descripción breve" class="in-fld">
+            </div>
+            <div class="flex items-center gap-1.5">
+              <input type="text" id="new-slide-url" placeholder="URL o ruta local (ej. imagenes/promo.jpg)" class="in-fld flex-1">
+              <label class="btn-p py-1 px-2.5 text-[10px] cursor-pointer shrink-0">
+                <i class="fa-solid fa-upload text-[9px]"></i>
+                <span>Subir foto</span>
+                <input type="file" id="new-slide-file" accept="image/*" class="hidden">
+              </label>
+            </div>
+            <p id="new-slide-error" class="text-error text-[10px] hidden"></p>
+            <button id="btn-add-slide" class="w-full btn-p py-1.5 text-xs font-bold">Guardar Diapositiva</button>
+          </div>
+        </div>
+
+        <!-- TAB 3: Datos de la Taquería -->
+        <div id="tab-view-settings" class="space-y-3 hidden">
+          <div class="p-3 bg-bg-surface/50 rounded-xl border border-white/10 space-y-2.5">
+            <h4 class="font-bold text-white text-xs flex items-center gap-1.5"><i class="fa-solid fa-store text-gold"></i> Información General de la Taquería</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label for="cfg-name" class="block font-medium text-text-muted mb-0.5 text-[11px]">Nombre de la Taquería</label>
+                <input type="text" id="cfg-name" placeholder="Taquería El Buen Taquito" class="in-fld">
+              </div>
+              <div>
+                <label for="cfg-tagline" class="block font-medium text-text-muted mb-0.5 text-[11px]">Eslogan o Lema</label>
+                <input type="text" id="cfg-tagline" placeholder="Sabor de la calle, directo a tu casa" class="in-fld">
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label for="cfg-phone" class="block font-medium text-text-muted mb-0.5 text-[11px]">Teléfono de Pedidos</label>
+                <input type="text" id="cfg-phone" placeholder="55 1234 5678" class="in-fld">
+              </div>
+              <div>
+                <label for="cfg-whatsapp" class="block font-medium text-text-muted mb-0.5 text-[11px]">WhatsApp (código país + número, ej. 5215512345678)</label>
+                <input type="text" id="cfg-whatsapp" placeholder="5215512345678" class="in-fld">
+              </div>
+            </div>
+            <div>
+              <label for="cfg-address" class="block font-medium text-text-muted mb-0.5 text-[11px]">Dirección de la Sucursal</label>
+              <input type="text" id="cfg-address" placeholder="Av. Revolución 456, Col. Escandón, CDMX" class="in-fld">
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label for="cfg-hours-open" class="block font-medium text-text-muted mb-0.5 text-[11px]">Hora Apertura</label>
+                <input type="time" id="cfg-hours-open" class="in-fld">
+              </div>
+              <div>
+                <label for="cfg-hours-close" class="block font-medium text-text-muted mb-0.5 text-[11px]">Hora Cierre</label>
+                <input type="time" id="cfg-hours-close" class="in-fld">
+              </div>
+              <div>
+                <label for="cfg-delivery-fee" class="block font-medium text-text-muted mb-0.5 text-[11px]">Costo Envío ($ MXN)</label>
+                <input type="number" step="1" id="cfg-delivery-fee" placeholder="25" class="in-fld font-bold text-gold">
+              </div>
+            </div>
+            <button type="button" id="btn-save-settings" class="w-full btn-p py-2 text-xs font-bold mt-2 shadow"><i class="fa-solid fa-floppy-disk text-[10px]"></i> Guardar Datos de la Taquería</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Item Editor (Add / Edit Dish) -->
+  <div id="modal-dish-editor" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-sm" role="dialog" aria-modal="true">
+    <div class="bg-bg-card border border-white/10 w-full max-w-lg max-h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-xs">
+      <div class="px-4 py-2.5 border-b border-white/10 bg-bg-surface/90 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-utensils text-gold"></i>
+          <h2 id="dish-modal-title" class="text-xs sm:text-sm font-bold text-white">Agregar Nuevo Platillo</h2>
+        </div>
+        <button id="btn-close-dish-modal" class="w-6 h-6 rounded-full bg-white/5 hover:bg-white/10 text-text-muted hover:text-white flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
+      </div>
+      
+      <form id="form-dish-editor" class="flex-1 overflow-y-auto p-4 space-y-3">
+        <input type="hidden" id="dish-edit-id" value="">
+        
+        <!-- Nombre y Categoría -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label for="dish-input-name" class="block font-medium text-text-muted mb-1 text-[11px]">Nombre del Platillo *</label>
+            <input type="text" id="dish-input-name" required placeholder="Ej. Tacos de Barbacoa" class="in-fld">
+            <p id="err-dish-name" class="text-error text-[10px] hidden">El nombre es requerido.</p>
+          </div>
+          <div>
+            <label for="dish-select-category" class="block font-medium text-text-muted mb-1 text-[11px]">Categoría *</label>
+            <select id="dish-select-category" class="in-fld">
+              <option value="Tacos">Tacos</option>
+              <option value="Especialidades">Especialidades</option>
+              <option value="Tortas">Tortas</option>
+              <option value="Bebidas y Postres">Bebidas y Postres</option>
+              <option value="__new__">+ Otra Categoría...</option>
+            </select>
+            <input type="text" id="dish-input-new-category" placeholder="Escribe el nombre de la nueva categoría..." class="in-fld mt-1.5 hidden">
+          </div>
+        </div>
+
+        <!-- Precio y Disponibilidad -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label for="dish-input-price" class="block font-medium text-text-muted mb-1 text-[11px]">Precio ($ MXN) *</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gold font-bold text-xs">$</span>
+              <input type="number" id="dish-input-price" step="0.50" min="0" required placeholder="35.00" class="in-fld pl-7 font-bold text-gold">
+            </div>
+            <p id="err-dish-price" class="text-error text-[10px] hidden">Ingresa un precio válido.</p>
+          </div>
+          <div>
+            <label class="block font-medium text-text-muted mb-1 text-[11px]">Estado del Platillo</label>
+            <label class="flex items-center gap-2 p-2 bg-bg-surface/50 border border-white/10 rounded-xl cursor-pointer">
+              <input type="checkbox" id="dish-input-available" checked class="rounded bg-slate-800 text-success">
+              <span class="font-semibold text-white text-[11px]">Disponible en el menú (Activo)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Descripción -->
+        <div>
+          <label for="dish-input-desc" class="block font-medium text-text-muted mb-1 text-[11px]">Descripción del Platillo</label>
+          <textarea id="dish-input-desc" rows="2" maxlength="250" placeholder="Ingredientes, preparación, o notas del sabor..." class="in-fld resize-none"></textarea>
+        </div>
+
+        <!-- Foto del Platillo -->
+        <div class="space-y-2 p-3 rounded-xl bg-bg-surface/50 border border-white/10">
+          <label class="block font-bold text-white text-[11px]"><i class="fa-solid fa-camera mr-1 text-gold"></i> Foto de tu Local</label>
+          <div class="flex items-center gap-3">
+            <img id="dish-preview-img" src="" alt="Vista previa" class="w-16 h-16 rounded-xl object-cover bg-slate-900 border border-white/10 shrink-0">
+            <div class="flex-1 space-y-1.5 min-w-0">
+              <div class="flex items-center gap-2">
+                <label class="btn-p py-1 px-2.5 text-[11px] cursor-pointer shadow">
+                  <i class="fa-solid fa-upload text-[10px]"></i>
+                  <span>Subir foto de mi local</span>
+                  <input type="file" id="dish-input-file" accept="image/*" class="hidden">
+                </label>
+                <button type="button" id="btn-dish-reset-photo" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-text-muted hover:text-white border border-white/10 text-[10px]">Restablecer</button>
+              </div>
+              <input type="text" id="dish-input-url" placeholder="O escribe enlace / ruta local (ej. imagenes/taco.jpg)" class="in-fld py-1 text-[10px] w-full">
+            </div>
+          </div>
+          <p class="text-[9px] text-text-muted">Acepta fotos tomadas con tu celular/computadora, o guardadas en la carpeta <code class="text-gold font-mono">imagenes/</code>.</p>
+        </div>
+
+        <!-- Opciones de Personalización -->
+        <div class="p-3 rounded-xl bg-bg-surface/50 border border-white/10 space-y-2">
+          <label class="block font-bold text-white text-[11px]"><i class="fa-solid fa-sliders mr-1 text-accent"></i> Opciones de Personalización para el Cliente</label>
+          <div class="grid grid-cols-2 gap-2 text-[11px]">
+            <label class="flex items-center gap-2 p-1.5 rounded-lg bg-bg-card border border-white/5 cursor-pointer">
+              <input type="checkbox" id="dish-opt-tortilla" class="rounded bg-slate-800 text-primary">
+              <span class="text-white">Opción de Tortilla (Maíz / Harina)</span>
+            </label>
+            <label class="flex items-center gap-2 p-1.5 rounded-lg bg-bg-card border border-white/5 cursor-pointer">
+              <input type="checkbox" id="dish-opt-salsas" class="rounded bg-slate-800 text-primary">
+              <span class="text-white">Opción de Salsas (Verde / Roja)</span>
+            </label>
+            <label class="flex items-center gap-2 p-1.5 rounded-lg bg-bg-card border border-white/5 cursor-pointer">
+              <input type="checkbox" id="dish-opt-toppings" class="rounded bg-slate-800 text-primary">
+              <span class="text-white">Opción de Verdura (Cilantro / Cebolla)</span>
+            </label>
+            <label class="flex items-center gap-2 p-1.5 rounded-lg bg-bg-card border border-white/5 cursor-pointer">
+              <input type="checkbox" id="dish-opt-cheese" class="rounded bg-slate-800 text-primary">
+              <span class="text-white">Extra Queso (+ $15.00)</span>
+            </label>
+            <label class="flex items-center gap-2 p-1.5 rounded-lg bg-bg-card border border-white/5 cursor-pointer col-span-2">
+              <input type="checkbox" id="dish-opt-flavor" class="rounded bg-slate-800 text-primary">
+              <span class="text-white">Opción de Sabor a elegir (refrescos / bebidas)</span>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Botones de Acción -->
+        <div class="pt-2 flex items-center justify-end gap-2 border-t border-white/10">
+          <button type="button" id="btn-cancel-dish" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-text-muted hover:text-white font-semibold text-xs border border-white/10">Cancelar</button>
+          <button type="submit" id="btn-save-dish" class="btn-p py-1.5 px-4 text-xs font-bold shadow-lg"><i class="fa-solid fa-floppy-disk text-[10px]"></i> Guardar Platillo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /* 1. CONFIG */
+    let CONFIG = {
+      name: 'Taquería El Buen Taquito',
+      tagline: 'Sabor de la calle, directo a tu casa',
+      phone: '55 1234 5678',
+      address: 'Av. Revolución 456, Col. Escandón, CDMX',
+      hours: { open: '13:00', close: '23:00', days: [0, 1, 2, 3, 4, 5, 6] },
+      deliveryFee: 2500,
+      maxQtyPerLine: 20,
+      adminPin: '1234',
+      whatsappNumber: '5215512345678',
+      trackerStageSeconds: [0, 10, 20, 30]
+    };
+
+    /* 2. STATE */
+    const DEFAULT_SLIDES = [
+      { id: 's1', title: '¡Tacos al Pastor Tradicionales!', subtitle: 'Con piña miel, cebolla, cilantro y salsas de la casa.', image: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?auto=format&fit=crop&w=800&q=70' },
+      { id: 's2', title: 'Especialidades al Carbón', subtitle: 'Gringas doraditas con queso fundido y carne al pastor.', image: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=800&q=70' },
+      { id: 's3', title: 'Aguas Frescas Artesanales', subtitle: 'Horchata y Jamaica 100% naturales para refrescarte.', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=70' }
+    ];
+
+    const DEFAULT_CATALOG = [
+      { id: 'taco-pastor', name: 'Tacos al Pastor', description: 'Carne de cerdo marinada con achiote y especias, piña, cilantro y cebolla. (por pieza)', price: 2800, category: 'Tacos', image: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?auto=format&fit=crop&w=800&q=70', available: true, customizer: { tortilla: true, salsas: true, toppings: true, extraCheese: true } },
+      { id: 'taco-bistec', name: 'Tacos de Bistec', description: 'Carne de res asada con toque de la casa. (por pieza)', price: 3200, category: 'Tacos', image: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=800&q=70', available: true, customizer: { tortilla: true, salsas: true, toppings: true, extraCheese: true } },
+      { id: 'taco-suadero', name: 'Tacos de Suadero', description: 'Confitado tradicional en cazuela, jugoso y suave. (por pieza)', price: 3000, category: 'Tacos', image: 'https://images.unsplash.com/photo-1615870216519-2f9fa575fa5c?auto=format&fit=crop&w=800&q=70', available: true, customizer: { tortilla: true, salsas: true, toppings: true, extraCheese: true } },
+      { id: 'gringa-pastor', name: 'Gringas al Pastor', description: 'Tortilla de harina grande, queso derretido, carne al pastor y piña.', price: 6500, category: 'Especialidades', image: 'https://images.unsplash.com/photo-1624300629298-e9de39c13be5?auto=format&fit=crop&w=800&q=70', available: true, customizer: { tortillaFixed: 'Tortilla de harina', salsas: true, toppings: true, extraCheese: true } },
+      { id: 'torta-especial', name: 'Tortas Especiales', description: 'Telera dorada con mantequilla, aguacate, frijoles y carne a elegir.', price: 7500, category: 'Tortas', image: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&fit=crop&w=800&q=70', available: true, customizer: { meat: true, salsas: true, toppings: true, extraCheese: true } },
+      { id: 'agua-horchata', name: 'Agua de Horchata', description: 'Agua fresca artesanal de arroz con canela.', price: 3500, category: 'Bebidas y Postres', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=70', available: true, customizer: {} },
+      { id: 'agua-jamaica', name: 'Agua de Jamaica', description: 'Agua fresca artesanal de flor de jamaica natural.', price: 3500, category: 'Bebidas y Postres', image: 'https://images.unsplash.com/photo-1546173159-315724a31696?auto=format&fit=crop&w=800&q=70', available: true, customizer: {} },
+      { id: 'refresco', name: 'Refresco Mexicano', description: 'Refresco embotellado de 355 ml, a elegir sabor.', price: 3000, category: 'Bebidas y Postres', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=70', available: true, customizer: { flavor: true } },
+      { id: 'flan', name: 'Flan Napolitano', description: 'Postre casero tradicional con caramelo dorado.', price: 4500, category: 'Bebidas y Postres', image: 'https://images.unsplash.com/photo-1528975604071-b4dc52a2d18c?auto=format&fit=crop&w=800&q=70', available: true, customizer: {} }
+    ];
+
+    const STATE = {
+      menu: [...DEFAULT_CATALOG], slides: [...DEFAULT_SLIDES], cart: [], activeOrder: null,
+      searchQuery: '', activeCategory: 'Tacos', slideIndex: 0, slideTimer: null,
+      customizerItem: null, editingCartIndex: null, deliveryType: 'delivery',
+      paymentMethod: 'card', gpsCoords: null, trackerTimer: null, dialogCallback: null,
+      adminFilterCategory: 'all', adminSearchQuery: ''
+    };
+
+    /* 3. STORAGE */
+    const STORAGE_KEYS = {
+      CART: 'taqueria:v1:cart',
+      PHOTOS: 'taqueria:v1:photos',
+      MENU: 'taqueria:v1:menu',
+      CONFIG: 'taqueria:v1:config',
+      DELIVERY: 'taqueria:v1:delivery',
+      ORDER: 'taqueria:v1:order'
+    };
+
+    const Storage = {
+      get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e) { return null; } },
+      set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e) { if(e.name === 'QuotaExceededError') showToast('Memoria llena. Intenta subir fotos de menor tamaño.', 'error'); return false; } },
+      remove(k) { try { localStorage.removeItem(k); } catch(e) {} }
+    };
+
+    /* 4. UTILS */
+    const $ = (id) => document.getElementById(id);
+    const $$ = (sel) => document.querySelectorAll(sel);
+    const mxn = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+    const formatMoney = (c) => mxn.format((c || 0) / 100);
+    const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[m]));
+    const SVG_TACO = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='200' height='200' fill='%231e293b'/><circle cx='100' cy='100' r='50' fill='%23fbbf24' opacity='0.2'/><path d='M60 120 C60 80, 140 80, 140 120 Z' fill='%23f59e0b'/><circle cx='85' cy='105' r='5' fill='%23ef4444'/><circle cx='115' cy='105' r='5' fill='%2322c55e'/><text x='100' y='155' font-family='sans-serif' font-size='12' fill='%2394a3b8' text-anchor='middle'>El Buen Taquito</text></svg>";
+
+    function validateLuhn(s) {
+      const c = s.replace(/\\D/g, '');
+      if (c.length < 13 || c.length > 19) return false;
+      let sum = 0, alt = false;
+      for (let i = c.length - 1; i >= 0; i--) {
+        let n = parseInt(c.charAt(i), 10);
+        if (alt) { n *= 2; if (n > 9) n -= 9; }
+        sum += n; alt = !alt;
+      }
+      return sum % 10 === 0;
+    }
+
+    function checkIsOpen() {
+      const now = new Date();
+      if (!CONFIG.hours.days.includes(now.getDay())) return false;
+      const [oh, om] = CONFIG.hours.open.split(':').map(Number);
+      const [ch, cm] = CONFIG.hours.close.split(':').map(Number);
+      const cur = now.getHours() * 60 + now.getMinutes();
+      return cur >= (oh * 60 + om) && cur < (ch * 60 + cm);
+    }
+
+    function showToast(msg, type = 'info') {
+      const cont = $('toast-container');
+      const t = document.createElement('div');
+      const icons = { success: 'fa-circle-check text-success', error: 'fa-circle-exclamation text-error', info: 'fa-circle-info text-accent' };
+      t.className = 'pointer-events-auto flex items-center gap-2 px-3 py-2 rounded-xl bg-bg-card border border-white/10 text-white text-xs shadow-xl transition-all duration-300 transform translate-y-2 opacity-0';
+      t.innerHTML = \`<i class="fa-solid \${icons[type] || icons.info}"></i><span>\${escapeHtml(msg)}</span>\`;
+      cont.appendChild(t);
+      requestAnimationFrame(() => t.classList.remove('translate-y-2', 'opacity-0'));
+      setTimeout(() => { t.classList.add('opacity-0', 'translate-y-2'); setTimeout(() => t.remove(), 300); }, 3500);
+    }
+
+    function openDialog({ title, message, confirmText = 'Aceptar', onConfirm }) {
+      $('dialog-title').textContent = title;
+      $('dialog-message').textContent = message;
+      $('dialog-confirm').textContent = confirmText;
+      STATE.dialogCallback = onConfirm;
+      $('custom-dialog').classList.remove('hidden');
+      lockScroll(true);
+    }
+    function closeDialog() {
+      $('custom-dialog').classList.add('hidden');
+      STATE.dialogCallback = null;
+      lockScroll(false);
+    }
+
+    function lockScroll(lock) {
+      if (lock) document.body.classList.add('modal-open');
+      else {
+        const any = ['modal-customizer', 'slideover-cart', 'modal-checkout', 'modal-tracker', 'modal-admin', 'modal-dish-editor', 'custom-dialog']
+          .some(id => !$(id).classList.contains('hidden'));
+        if (!any) document.body.classList.remove('modal-open');
+      }
+    }
+
+    /* 5. RENDER & CATEGORIES */
+    const BASE_CATEGORIES = ['Tacos', 'Especialidades', 'Tortas', 'Bebidas y Postres'];
+    function getCategories() {
+      const list = [...BASE_CATEGORIES];
+      STATE.menu.forEach(it => {
+        if (it.category && !list.includes(it.category)) {
+          list.push(it.category);
+        }
+      });
+      return list;
+    }
+
+    function renderStatusBadge() {
+      const b = $('badge-status'), open = checkIsOpen();
+      b.className = open ? 'text-[10px] px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1 bg-success/20 text-success border border-success/30' : 'text-[10px] px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1 bg-error/20 text-error border border-error/30';
+      b.innerHTML = open ? '<span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span> Abierto' : '<span class="w-1.5 h-1.5 rounded-full bg-error"></span> Cerrado';
+    }
+
+    function renderCategoryChips() {
+      const cats = getCategories();
+      $('category-chips').innerHTML = cats.map(cat => {
+        const a = STATE.activeCategory === cat;
+        return \`<button type="button" data-cat="\${escapeHtml(cat)}" class="chip-cat whitespace-nowrap px-3.5 py-1 rounded-full text-xs font-semibold border transition-all \${a ? 'bg-primary border-primary text-white shadow' : 'bg-bg-card/80 border-white/10 text-text-muted hover:text-white'}">\${escapeHtml(cat)}</button>\`;
+      }).join('');
+    }
+
+    function renderCarousel() {
+      const track = $('carousel-track'), dots = $('carousel-indicators'), slides = STATE.slides;
+      if (!slides.length) return;
+      track.innerHTML = slides.map((s, i) => \`
+        <div class="absolute inset-0 transition-opacity duration-500 \${i === STATE.slideIndex ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}">
+          <img src="\${escapeHtml(s.image)}" alt="\${escapeHtml(s.title)}" loading="lazy" onerror="this.onerror=null;this.src='\${SVG_TACO}'" class="w-full h-full object-cover">
+          <div class="absolute inset-0 bg-gradient-to-t from-bg-page via-bg-page/40 to-transparent flex flex-col justify-end p-4 sm:p-6">
+            <span class="text-[9px] uppercase font-bold text-gold tracking-wider">Especial</span>
+            <h2 class="text-sm sm:text-xl font-extrabold text-white leading-tight">\${escapeHtml(s.title)}</h2>
+            <p class="text-xs text-text-muted mt-0.5 line-clamp-1 max-w-sm">\${escapeHtml(s.subtitle)}</p>
+          </div>
+        </div>\`).join('');
+      dots.innerHTML = slides.map((_, i) => \`<button type="button" data-slide="\${i}" class="w-2 h-2 rounded-full transition-all \${i === STATE.slideIndex ? 'bg-gold w-4' : 'bg-white/40'}"></button>\`).join('');
+    }
+
+    function setSlide(i) {
+      if (!STATE.slides.length) return;
+      STATE.slideIndex = (i + STATE.slides.length) % STATE.slides.length;
+      renderCarousel();
+    }
+    function startCarousel() { stopCarousel(); STATE.slideTimer = setInterval(() => setSlide(STATE.slideIndex + 1), 5000); }
+    function stopCarousel() { if (STATE.slideTimer) { clearInterval(STATE.slideTimer); STATE.slideTimer = null; } }
+
+    function renderMenu() {
+      const container = $('menu-container'), q = STATE.searchQuery.toLowerCase().trim();
+      const filtered = STATE.menu.filter(it => !q || it.name.toLowerCase().includes(q) || (it.description && it.description.toLowerCase().includes(q)));
+
+      if (!filtered.length) {
+        container.innerHTML = \`<div class="text-center py-10 px-4 bg-bg-card/40 rounded-2xl border border-white/5 space-y-2"><i class="fa-solid fa-magnifying-glass text-xl text-text-muted"></i><p class="font-bold text-white text-xs">Sin resultados para "\${escapeHtml(STATE.searchQuery)}"</p><button id="btn-reset-search" class="btn-p">Ver todo el menú</button></div>\`;
+        return;
+      }
+
+      const cats = getCategories();
+      container.innerHTML = cats.map(cat => {
+        const items = filtered.filter(it => it.category === cat);
+        if (!items.length) return '';
+        return \`
+          <section id="sec-\${cat.replace(/\\s+/g, '-').toLowerCase()}" class="menu-sec scroll-mt-24" data-category="\${escapeHtml(cat)}">
+            <div class="flex items-center gap-2 mb-2.5">
+              <h3 class="text-base font-bold text-white">\${escapeHtml(cat)}</h3>
+              <span class="text-[10px] px-2 py-0.2 rounded-full bg-white/5 text-text-muted font-semibold">\${items.length}</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              \${items.map(it => {
+                const isAvail = it.available !== false;
+                return \`
+                <div class="card-item group bg-bg-card border \${isAvail ? 'border-white/10 hover:border-accent/40 cursor-pointer' : 'border-red-500/20 opacity-75 cursor-not-allowed'} rounded-2xl p-3 flex flex-col justify-between shadow transition-all relative overflow-hidden" data-id="\${escapeHtml(it.id)}" data-available="\${isAvail}">
+                  \${!isAvail ? \`<span class="absolute top-2 left-2 z-10 bg-error/90 text-white font-bold text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider shadow">Agotado</span>\` : ''}
+                  <div class="space-y-2">
+                    <div class="relative h-36 w-full rounded-xl overflow-hidden bg-slate-900">
+                      <img src="\${escapeHtml(it.image)}" alt="\${escapeHtml(it.name)}" loading="lazy" onerror="this.onerror=null;this.src='\${SVG_TACO}'" class="w-full h-full object-cover \${isAvail ? 'group-hover:scale-105' : 'grayscale'} transition-transform duration-300">
+                      <span class="absolute top-2 right-2 bg-slate-950/80 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs font-bold text-gold border border-white/10">\${formatMoney(it.price)}</span>
+                    </div>
+                    <div>
+                      <h4 class="font-bold text-white text-xs \${isAvail ? 'group-hover:text-accent' : 'text-text-muted'} transition-colors">\${escapeHtml(it.name)}</h4>
+                      <p class="text-[11px] text-text-muted mt-0.5 line-clamp-2 leading-relaxed">\${escapeHtml(it.description || '')}</p>
+                    </div>
+                  </div>
+                  <div class="pt-2.5 flex items-center justify-between border-t border-white/5 mt-2">
+                    <span class="text-xs font-extrabold text-gold">\${formatMoney(it.price)}</span>
+                    \${isAvail 
+                      ? \`<button type="button" class="btn-p py-1 px-2.5 text-xs"><i class="fa-solid fa-plus text-[9px]"></i> Agregar</button>\`
+                      : \`<span class="text-[10px] font-bold text-error px-2 py-1"><i class="fa-solid fa-ban text-[9px] mr-1"></i>Agotado</span>\`
+                    }
+                  </div>
+                </div>\`;
+              }).join('')}
+            </div>
+          </section>\`;
+      }).join('');
+    }
+
+    function calculateCart() {
+      let subtotal = 0; const valid = [];
+      for (const line of STATE.cart) {
+        const it = STATE.menu.find(m => m.id === line.itemId);
+        if (!it) continue;
+        let unit = it.price;
+        if (line.options?.extraCheese) unit += 1500;
+        const total = unit * line.quantity;
+        subtotal += total;
+        valid.push({ ...line, unitPrice: unit, totalPrice: total });
+      }
+      STATE.cart = valid;
+      const deliveryFee = STATE.deliveryType === 'pickup' ? 0 : CONFIG.deliveryFee;
+      return { subtotal, deliveryFee, total: subtotal + deliveryFee };
+    }
+
+    function renderCartDrawer() {
+      const container = $('cart-items-container'), { subtotal, deliveryFee, total } = calculateCart();
+      const count = STATE.cart.reduce((s, it) => s + it.quantity, 0);
+
+      $('cart-counter').textContent = count;
+      $('cart-counter').classList.toggle('hidden', count === 0);
+      $('cart-subtotal').textContent = formatMoney(subtotal);
+      $('cart-delivery-fee').textContent = deliveryFee === 0 ? 'Gratis' : formatMoney(deliveryFee);
+      $('cart-delivery-label').textContent = STATE.deliveryType === 'pickup' ? 'Recoger en tienda' : 'Costo de envío';
+      $('cart-total').textContent = formatMoney(total);
+      $('checkout-pay-total').textContent = formatMoney(total);
+
+      const clearBtn = $('btn-clear-cart'), chkBtn = $('btn-start-checkout');
+
+      if (!STATE.cart.length) {
+        clearBtn.classList.add('hidden'); chkBtn.disabled = true;
+        container.innerHTML = \`<div class="text-center py-10 space-y-2"><div class="w-10 h-10 mx-auto rounded-full bg-white/5 flex items-center justify-center text-text-muted"><i class="fa-solid fa-basket-shopping text-sm"></i></div><p class="text-xs text-text-muted">Tu carrito está vacío.</p><button id="btn-back-to-menu" class="btn-p">Explorar Menú</button></div>\`;
+        return;
+      }
+
+      clearBtn.classList.remove('hidden'); chkBtn.disabled = false;
+      container.innerHTML = STATE.cart.map((line, idx) => {
+        const item = STATE.menu.find(m => m.id === line.itemId), name = item ? item.name : 'Platillo';
+        const mods = [];
+        if (line.options.tortilla) mods.push(\`Tortilla: \${line.options.tortilla}\`);
+        if (line.options.meat) mods.push(\`Carne: \${line.options.meat}\`);
+        if (line.options.flavor) mods.push(\`Sabor: \${line.options.flavor}\`);
+        if (line.options.toppings) mods.push(line.options.toppings);
+        if (line.options.salsas?.length) mods.push(\`Salsas: \${line.options.salsas.join(', ')}\`);
+        if (line.options.extraCheese) mods.push('Extra queso (+$15)');
+
+        return \`
+          <div class="p-2.5 bg-bg-surface/50 border border-white/5 rounded-xl space-y-1.5 text-xs">
+            <div class="flex justify-between items-start">
+              <div><h4 class="font-bold text-white">\${escapeHtml(name)}</h4><p class="text-gold font-semibold text-[11px]">\${formatMoney(line.unitPrice)} c/u</p></div>
+              <span class="font-bold text-white">\${formatMoney(line.totalPrice)}</span>
+            </div>
+            \${mods.length ? \`<p class="text-[10px] text-text-muted bg-slate-900/60 p-1.5 rounded-lg border border-white/5">\${mods.map(escapeHtml).join(' • ')}</p>\` : ''}
+            \${line.notes ? \`<p class="text-[10px] text-accent italic"><i class="fa-solid fa-pencil text-[8px] mr-1"></i>"\${escapeHtml(line.notes)}"</p>\` : ''}
+            <div class="flex items-center justify-between pt-1 border-t border-white/5">
+              <div class="flex items-center gap-1.5 bg-bg-card border border-white/10 rounded-lg px-1.5 py-0.5">
+                <button type="button" class="btn-cart-minus text-text-muted hover:text-white font-bold px-1" data-index="\${idx}">-</button>
+                <span class="w-3 text-center font-bold text-white text-xs">\${line.quantity}</span>
+                <button type="button" class="btn-cart-plus text-text-muted hover:text-white font-bold px-1" data-index="\${idx}">+</button>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" class="btn-cart-edit text-accent hover:underline text-[11px]" data-index="\${idx}">Editar</button>
+                <button type="button" class="btn-cart-remove text-error hover:text-red-400 text-xs" data-index="\${idx}"><i class="fa-solid fa-trash-can"></i></button>
+              </div>
+            </div>
+          </div>\`;
+      }).join('');
+    }
+
+    /* 6. CUSTOMIZER */
+    function openCustomizer(itemId, editingIdx = null) {
+      const it = STATE.menu.find(m => m.id === itemId);
+      if (!it) return;
+      STATE.customizerItem = it; STATE.editingCartIndex = editingIdx;
+
+      $('customizer-title').textContent = it.name;
+      $('customizer-base-price').textContent = \`\${formatMoney(it.price)} base\`;
+
+      let q = 1, opts = {}, notes = '';
+      if (editingIdx !== null && STATE.cart[editingIdx]) {
+        const l = STATE.cart[editingIdx];
+        q = l.quantity; opts = l.options || {}; notes = l.notes || '';
+      }
+      $('customizer-qty').textContent = q;
+
+      const cfg = it.customizer || {};
+      let html = '';
+
+      if (cfg.tortilla) {
+        const sel = opts.tortilla || 'Maíz';
+        html += \`<div class="space-y-1"><span class="font-bold text-text-muted uppercase text-[9px]">Tortilla *</span><div class="grid grid-cols-2 gap-1.5">\${['Maíz','Harina'].map(t => \`<label class="flex items-center justify-center py-1.5 px-2 rounded-xl border border-white/10 bg-bg-page/70 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/20 font-semibold text-xs"><input type="radio" name="opt-tortilla" value="\${t}" \${sel === t ? 'checked':''} class="hidden">\${t}</label>\`).join('')}</div></div>\`;
+      } else if (cfg.tortillaFixed) {
+        html += \`<div class="p-2 rounded-xl bg-bg-page/50 border border-white/5 flex justify-between text-xs"><span class="text-text-muted">Tortilla:</span><span class="font-bold text-white">\${escapeHtml(cfg.tortillaFixed)}</span></div>\`;
+      }
+
+      if (cfg.meat) {
+        const selMeat = opts.meat || '';
+        html += \`<div class="space-y-1"><span class="font-bold text-text-muted uppercase text-[9px]">Carne *</span><div class="grid grid-cols-3 gap-1.5">\${['Pastor','Bistec','Suadero'].map(m => \`<label class="flex items-center justify-center py-1.5 rounded-xl border border-white/10 bg-bg-page/70 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/20 font-semibold text-xs text-center"><input type="radio" name="opt-meat" value="\${m}" \${selMeat === m ? 'checked':''} class="hidden">\${m}</label>\`).join('')}</div><p id="err-cust-meat" class="text-error text-[10px] hidden">Elige la carne</p></div>\`;
+      }
+
+      if (cfg.flavor) {
+        const selFlav = opts.flavor || '';
+        html += \`<div class="space-y-1"><span class="font-bold text-text-muted uppercase text-[9px]">Sabor *</span><div class="grid grid-cols-2 sm:grid-cols-4 gap-1">\${['Cola','Naranja','Toronja','Limón'].map(f => \`<label class="flex items-center justify-center py-1.5 rounded-xl border border-white/10 bg-bg-page/70 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/20 font-semibold text-xs text-center"><input type="radio" name="opt-flavor" value="\${f}" \${selFlav === f ? 'checked':''} class="hidden">\${f}</label>\`).join('')}</div><p id="err-cust-flavor" class="text-error text-[10px] hidden">Elige un sabor</p></div>\`;
+      }
+
+      if (cfg.toppings) {
+        const selTop = opts.toppings || 'Con cebolla y cilantro';
+        html += \`<div class="space-y-1"><span class="font-bold text-text-muted uppercase text-[9px]">Verdura</span><div class="grid grid-cols-2 gap-1.5">\${['Con cebolla y cilantro','Sin verdura'].map(top => \`<label class="flex items-center justify-center py-1.5 px-2 rounded-xl border border-white/10 bg-bg-page/70 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/20 font-semibold text-xs text-center"><input type="radio" name="opt-toppings" value="\${top}" \${selTop === top ? 'checked':''} class="hidden">\${top}</label>\`).join('')}</div></div>\`;
+      }
+
+      if (cfg.salsas) {
+        const selS = opts.salsas || [], isSin = selS.includes('Sin salsa');
+        html += \`<div class="space-y-1"><span class="font-bold text-text-muted uppercase text-[9px]">Salsas</span><div class="grid grid-cols-2 gap-1.5">\${['Verde','Roja','Picante de la casa'].map(s => \`<label class="flex items-center gap-1.5 py-1.5 px-2.5 rounded-xl border border-white/10 bg-bg-page/70 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/20 text-xs"><input type="checkbox" name="opt-salsa" value="\${s}" \${!isSin && selS.includes(s) ? 'checked':''} class="salsa-chk rounded bg-slate-800 text-primary"> \${s}</label>\`).join('')}<label class="flex items-center gap-1.5 py-1.5 px-2.5 rounded-xl border border-white/10 bg-bg-page/70 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/20 text-xs col-span-2"><input type="checkbox" name="opt-salsa" value="Sin salsa" \${isSin ? 'checked':''} id="cust-sin-salsa" class="rounded bg-slate-800 text-primary"> Sin salsa</label></div></div>\`;
+      }
+
+      if (cfg.extraCheese) {
+        html += \`<div class="pt-1.5 border-t border-white/5"><label class="flex items-center justify-between p-2 rounded-xl border border-white/10 bg-bg-page/70 cursor-pointer has-[:checked]:border-gold has-[:checked]:bg-gold/10"><div class="flex items-center gap-2"><input type="checkbox" id="cust-extra-cheese" \${opts.extraCheese ? 'checked':''} class="rounded bg-slate-800 text-gold"><span class="font-bold text-white text-xs">Extra queso</span></div><span class="font-bold text-gold text-xs">+ $15.00 c/u</span></label></div>\`;
+      }
+
+      html += \`<div class="space-y-1 pt-1.5 border-t border-white/5"><div class="flex justify-between items-center text-[10px] text-text-muted"><label for="cust-notes" class="font-bold uppercase text-[9px]">Instrucciones</label><span id="cust-notes-len">0/200</span></div><textarea id="cust-notes" maxlength="200" rows="2" placeholder="Ej. Bien doradito, salsas aparte..." class="in-fld resize-none">\${escapeHtml(notes)}</textarea></div>\`;
+
+      const body = $('customizer-body');
+      body.innerHTML = html;
+
+      const sin = $('cust-sin-salsa'), chks = $$('.salsa-chk');
+      if (sin) {
+        sin.addEventListener('change', () => { if (sin.checked) chks.forEach(c => c.checked = false); });
+        chks.forEach(c => { c.addEventListener('change', () => { if (c.checked && sin.checked) sin.checked = false; }); });
+      }
+
+      const notEl = $('cust-notes'), lenEl = $('cust-notes-len');
+      if (notEl && lenEl) {
+        lenEl.textContent = \`\${notEl.value.length}/200\`;
+        notEl.addEventListener('input', () => { lenEl.textContent = \`\${notEl.value.length}/200\`; });
+      }
+
+      body.addEventListener('change', updateCustomizerLiveTotal);
+      updateCustomizerLiveTotal();
+
+      $('modal-customizer').classList.remove('hidden');
+      lockScroll(true);
+    }
+
+    function updateCustomizerLiveTotal() {
+      const it = STATE.customizerItem;
+      if (!it) return;
+      const q = parseInt($('customizer-qty').textContent, 10) || 1;
+      let unit = it.price;
+      if ($('cust-extra-cheese')?.checked) unit += 1500;
+      $('customizer-live-total').textContent = formatMoney(unit * q);
+
+      let ok = true;
+      if (it.customizer?.meat) {
+        const has = !!document.querySelector('input[name="opt-meat"]:checked');
+        const err = $('err-cust-meat');
+        if (!has) { ok = false; err?.classList.remove('hidden'); } else err?.classList.add('hidden');
+      }
+      if (it.customizer?.flavor) {
+        const has = !!document.querySelector('input[name="opt-flavor"]:checked');
+        const err = $('err-cust-flavor');
+        if (!has) { ok = false; err?.classList.remove('hidden'); } else err?.classList.add('hidden');
+      }
+      $('btn-customizer-submit').disabled = !ok;
+      $('customizer-submit-text').textContent = STATE.editingCartIndex !== null ? 'Guardar' : 'Agregar';
+    }
+
+    function closeCustomizer() {
+      $('modal-customizer').classList.add('hidden');
+      STATE.customizerItem = null; STATE.editingCartIndex = null; lockScroll(false);
+    }
+
+    function commitCustomizer() {
+      const it = STATE.customizerItem;
+      if (!it) return;
+      const q = parseInt($('customizer-qty').textContent, 10) || 1, options = {};
+      const cfg = it.customizer || {};
+      if (cfg.tortilla) options.tortilla = document.querySelector('input[name="opt-tortilla"]:checked')?.value;
+      else if (cfg.tortillaFixed) options.tortilla = cfg.tortillaFixed;
+      if (cfg.meat) options.meat = document.querySelector('input[name="opt-meat"]:checked')?.value;
+      if (cfg.flavor) options.flavor = document.querySelector('input[name="opt-flavor"]:checked')?.value;
+      if (cfg.toppings) options.toppings = document.querySelector('input[name="opt-toppings"]:checked')?.value;
+      if (cfg.salsas) {
+        const s = []; $$('input[name="opt-salsa"]:checked').forEach(c => s.push(c.value));
+        options.salsas = s;
+      }
+      if ($('cust-extra-cheese')?.checked) options.extraCheese = true;
+
+      const notes = ($('cust-notes')?.value || '').trim();
+      let unit = it.price;
+      if (options.extraCheese) unit += 1500;
+      const total = unit * q;
+
+      if (STATE.editingCartIndex !== null) {
+        STATE.cart[STATE.editingCartIndex] = { id: STATE.cart[STATE.editingCartIndex].id, itemId: it.id, quantity: q, options, notes, unitPrice: unit, totalPrice: total };
+        showToast('Platillo actualizado', 'success');
+      } else {
+        const m = STATE.cart.findIndex(l => l.itemId === it.id && l.notes === notes && JSON.stringify(l.options) === JSON.stringify(options));
+        if (m >= 0) {
+          const nq = Math.min(STATE.cart[m].quantity + q, CONFIG.maxQtyPerLine);
+          STATE.cart[m].quantity = nq; STATE.cart[m].totalPrice = STATE.cart[m].unitPrice * nq;
+          showToast(\`Cantidad actualizada: \${nq}\`, 'success');
+        } else {
+          STATE.cart.push({ id: 'line-' + Date.now().toString(36), itemId: it.id, quantity: q, options, notes, unitPrice: unit, totalPrice: total });
+          showToast('Agregado al carrito', 'success');
+        }
+      }
+      Storage.set(STORAGE_KEYS.CART, STATE.cart);
+      renderCartDrawer();
+      closeCustomizer();
+    }
+
+    /* 7. CHECKOUT */
+    function openCheckout() {
+      if (!STATE.cart.length) return;
+      closeCart();
+      const saved = Storage.get(STORAGE_KEYS.DELIVERY) || {};
+      $('del-name').value = saved.name || '';
+      $('del-phone').value = saved.phone || '';
+      $('del-street').value = saved.street || '';
+      $('del-num-ext').value = saved.numExt || '';
+      $('del-num-int').value = saved.numInt || '';
+      $('del-colonia').value = saved.colonia || '';
+      $('del-notes').value = saved.notes || '';
+
+      setDeliveryType(saved.type || STATE.deliveryType || 'delivery');
+      setPaymentMethod(STATE.paymentMethod || 'card');
+      setCheckoutStep(1);
+      $('modal-checkout').classList.remove('hidden');
+      lockScroll(true);
+    }
+    function closeCheckout() { $('modal-checkout').classList.add('hidden'); lockScroll(false); }
+
+    function setDeliveryType(t) {
+      STATE.deliveryType = t;
+      const isDel = t === 'delivery';
+      $('type-delivery').className = isDel ? 'py-1.5 rounded-lg font-bold bg-primary text-white flex items-center justify-center gap-1 shadow' : 'py-1.5 rounded-lg font-semibold text-text-muted hover:text-white flex items-center justify-center gap-1';
+      $('type-pickup').className = !isDel ? 'py-1.5 rounded-lg font-bold bg-primary text-white flex items-center justify-center gap-1 shadow' : 'py-1.5 rounded-lg font-semibold text-text-muted hover:text-white flex items-center justify-center gap-1';
+      $('delivery-address-section').classList.toggle('hidden', !isDel);
+      $('pickup-info').classList.toggle('hidden', isDel);
+      $('pickup-store-address').textContent = CONFIG.address;
+      renderCartDrawer();
+    }
+
+    function setPaymentMethod(m) {
+      STATE.paymentMethod = m;
+      const isCard = m === 'card';
+      $('pay-method-card').className = isCard ? 'py-1.5 rounded-lg font-bold bg-primary text-white flex items-center justify-center gap-1 shadow' : 'py-1.5 rounded-lg font-semibold text-text-muted hover:text-white flex items-center justify-center gap-1';
+      $('pay-method-cash').className = !isCard ? 'py-1.5 rounded-lg font-bold bg-primary text-white flex items-center justify-center gap-1 shadow' : 'py-1.5 rounded-lg font-semibold text-text-muted hover:text-white flex items-center justify-center gap-1';
+      $('payment-card-form').classList.toggle('hidden', !isCard);
+      $('payment-cash-form').classList.toggle('hidden', isCard);
+      if (!isCard) updateCashChange();
+    }
+
+    function setCheckoutStep(step) {
+      const s1 = $('step-delivery'), s2 = $('step-payment');
+      const ind = $('checkout-step-indicator'), back = $('btn-checkout-back'), next = $('btn-checkout-next');
+      if (step === 1) {
+        s1.classList.remove('hidden'); s2.classList.add('hidden');
+        ind.textContent = 'Paso 1 de 2: Entrega';
+        back.classList.add('hidden');
+        next.innerHTML = '<span>Ir a Forma de Pago</span><i class="fa-solid fa-arrow-right text-[10px]"></i>';
+      } else {
+        s1.classList.add('hidden'); s2.classList.remove('hidden');
+        ind.textContent = 'Paso 2 de 2: Forma de Pago';
+        back.classList.remove('hidden');
+        next.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i><span>Confirmar y Enviar Pedido</span>';
+      }
+    }
+
+    function validateStep1() {
+      let ok = true;
+      const name = $('del-name'), phone = $('del-phone');
+      const errN = $('err-del-name'), errP = $('err-del-phone');
+
+      if (!name.value.trim()) { errN.textContent = 'El nombre es obligatorio'; errN.classList.remove('hidden'); ok = false; } else errN.classList.add('hidden');
+      const pDigits = phone.value.replace(/\\D/g, '');
+      if (pDigits.length !== 10) { errP.textContent = 'Debe contener 10 dígitos'; errP.classList.remove('hidden'); ok = false; } else errP.classList.add('hidden');
+
+      if (STATE.deliveryType === 'delivery') {
+        const st = $('del-street'), ne = $('del-num-ext'), col = $('del-colonia');
+        const errSt = $('err-del-street'), errNe = $('err-del-num-ext'), errCol = $('err-del-colonia');
+        if (!st.value.trim()) { errSt.textContent = 'Calle obligatoria'; errSt.classList.remove('hidden'); ok = false; } else errSt.classList.add('hidden');
+        if (!ne.value.trim()) { errNe.textContent = 'No. Ext obligatorio'; errNe.classList.remove('hidden'); ok = false; } else errNe.classList.add('hidden');
+        if (!col.value.trim()) { errCol.textContent = 'Colonia obligatoria'; errCol.classList.remove('hidden'); ok = false; } else errCol.classList.add('hidden');
+      }
+
+      if (ok) {
+        Storage.set(STORAGE_KEYS.DELIVERY, {
+          type: STATE.deliveryType, name: name.value.trim(), phone: pDigits,
+          street: $('del-street').value.trim(), numExt: $('del-num-ext').value.trim(),
+          numInt: $('del-num-int').value.trim(), colonia: $('del-colonia').value.trim(),
+          notes: $('del-notes').value.trim()
+        });
+      }
+      return ok;
+    }
+
+    function updateCashChange() {
+      const { total } = calculateCart();
+      const val = parseFloat($('cash-amount').value) || 0;
+      const cents = Math.round(val * 100);
+      const diff = cents - total;
+      const txt = $('cash-change-text'), err = $('err-cash-amount');
+      if (diff >= 0) {
+        txt.textContent = formatMoney(diff);
+        txt.className = 'text-sm font-bold text-success';
+        err.classList.add('hidden');
+      } else {
+        txt.textContent = '- ' + formatMoney(Math.abs(diff));
+        txt.className = 'text-sm font-bold text-error';
+      }
+    }
+
+    function submitCheckout() {
+      const { total } = calculateCart();
+      if (STATE.paymentMethod === 'card') {
+        const num = $('card-number').value.replace(/\\D/g, '');
+        const holder = $('card-holder').value.trim();
+        const exp = $('card-expiry').value.trim();
+        const cvv = $('card-cvv').value.replace(/\\D/g, '');
+        const errN = $('err-card-number'), errH = $('err-card-holder'), errE = $('err-card-expiry'), errC = $('err-card-cvv');
+
+        let cardOk = true;
+        if (!validateLuhn(num)) { errN.textContent = 'Número de tarjeta inválido'; errN.classList.remove('hidden'); cardOk = false; } else errN.classList.add('hidden');
+        if (!holder) { errH.textContent = 'Nombre de titular obligatorio'; errH.classList.remove('hidden'); cardOk = false; } else errH.classList.add('hidden');
+        if (!/^\\d{2}\\/\\d{2}$/.test(exp)) { errE.textContent = 'Formato MM/AA requerido'; errE.classList.remove('hidden'); cardOk = false; } else errE.classList.add('hidden');
+        if (cvv.length < 3) { errC.textContent = 'CVV inválido'; errC.classList.remove('hidden'); cardOk = false; } else errC.classList.add('hidden');
+
+        if (!cardOk) return;
+        if (num === '4000000000000002') {
+          showToast('Pago rechazado: Fondos insuficientes (Simulación)', 'error');
+          return;
+        }
+      } else {
+        const val = parseFloat($('cash-amount').value) || 0;
+        const cents = Math.round(val * 100);
+        if (cents < total) {
+          const err = $('err-cash-amount');
+          err.textContent = \`El monto debe ser al menos \${formatMoney(total)}\`;
+          err.classList.remove('hidden');
+          return;
+        }
+      }
+
+      const del = Storage.get(STORAGE_KEYS.DELIVERY) || {};
+      const orderId = 'TBT-' + Math.floor(1000 + Math.random() * 9000);
+      const order = {
+        id: orderId, createdAt: Date.now(), items: [...STATE.cart],
+        deliveryType: STATE.deliveryType, paymentMethod: STATE.paymentMethod,
+        total, deliveryInfo: del
+      };
+
+      STATE.activeOrder = order;
+      Storage.set(STORAGE_KEYS.ORDER, order);
+      STATE.cart = [];
+      Storage.set(STORAGE_KEYS.CART, []);
+      renderCartDrawer();
+      closeCheckout();
+      showToast('¡Pedido confirmado con éxito!', 'success');
+      startTracker(order);
+    }
+
+    /* 8. TRACKER */
+    function checkActiveOrder() {
+      const saved = Storage.get(STORAGE_KEYS.ORDER);
+      if (saved && saved.id) {
+        STATE.activeOrder = saved;
+        updateTrackerBanner();
+      }
+    }
+
+    function startTracker(order) {
+      STATE.activeOrder = order;
+      openTracker();
+      updateTrackerBanner();
+    }
+
+    function openTracker() {
+      if (!STATE.activeOrder) return;
+      const ord = STATE.activeOrder;
+      $('tracker-order-id').textContent = ord.id;
+      $('tracker-type').textContent = ord.deliveryType === 'delivery' ? 'A Domicilio' : 'Recoger en Tienda';
+      $('tracker-destination').textContent = ord.deliveryType === 'delivery' ? \`\${ord.deliveryInfo.street || ''} \${ord.deliveryInfo.numExt || ''}, \${ord.deliveryInfo.colonia || ''}\` : CONFIG.address;
+      $('tracker-payment').textContent = ord.paymentMethod === 'card' ? 'Tarjeta (Pagado)' : 'Efectivo contra entrega';
+      $('tracker-total').textContent = formatMoney(ord.total);
+
+      $('stage-3-title').textContent = ord.deliveryType === 'delivery' ? 'En Camino' : 'Listo para recoger';
+      $('stage-3-desc').textContent = ord.deliveryType === 'delivery' ? 'El repartidor va hacia tu dirección.' : 'Pasa a recoger a nuestra sucursal.';
+
+      const dest = encodeURIComponent(ord.deliveryType === 'delivery' ? \`\${ord.deliveryInfo.street} \${ord.deliveryInfo.numExt}, \${ord.deliveryInfo.colonia}, CDMX\` : CONFIG.address);
+      $('btn-maps-link').href = \`https://www.google.com/maps/search/?api=1&query=\${dest}\`;
+
+      if (CONFIG.whatsappNumber) {
+        let msg = \`*¡Hola! Nuevo pedido en \${CONFIG.name}*\` + '\\n';
+        msg += \`*Folio:* \${ord.id}\\n\`;
+        msg += \`*Tipo:* \${ord.deliveryType === 'delivery' ? 'A Domicilio' : 'Recoger en Tienda'}\\n\`;
+        msg += \`*Cliente:* \${ord.deliveryInfo.name || ''} (\${ord.deliveryInfo.phone || ''})\\n\`;
+        if (ord.deliveryType === 'delivery') {
+          msg += \`*Dirección:* \${ord.deliveryInfo.street} \${ord.deliveryInfo.numExt}, Col. \${ord.deliveryInfo.colonia}\\n\`;
+        }
+        msg += \`*Total:* \${formatMoney(ord.total)}\\n\\n*Detalle del pedido:*\\n\`;
+        ord.items.forEach(l => {
+          const it = STATE.menu.find(m => m.id === l.itemId) || { name: 'Platillo' };
+          msg += \`- \${l.quantity}x \${it.name} (\${formatMoney(l.totalPrice)})\\n\`;
+        });
+        const wa = $('btn-whatsapp-order');
+        wa.href = \`https://wa.me/\${CONFIG.whatsappNumber}?text=\${encodeURIComponent(msg)}\`;
+        wa.classList.remove('hidden');
+      }
+
+      $('modal-tracker').classList.remove('hidden');
+      lockScroll(true);
+      runTrackerLoop();
+    }
+
+    function closeTracker() { $('modal-tracker').classList.add('hidden'); lockScroll(false); }
+
+    function runTrackerLoop() {
+      if (STATE.trackerTimer) clearInterval(STATE.trackerTimer);
+      function tick() {
+        if (!STATE.activeOrder) return;
+        const elapsed = Math.floor((Date.now() - STATE.activeOrder.createdAt) / 1000);
+        $('tracker-elapsed').textContent = elapsed + 's';
+
+        const stages = CONFIG.trackerStageSeconds;
+        let cur = 1;
+        if (elapsed >= stages[3]) cur = 4;
+        else if (elapsed >= stages[2]) cur = 3;
+        else if (elapsed >= stages[1]) cur = 2;
+
+        $$('.timeline-step').forEach(st => {
+          const n = parseInt(st.getAttribute('data-stage'), 10);
+          const icon = st.querySelector('.step-icon'), num = st.querySelector('.num'), check = st.querySelector('.fa-check');
+          const title = st.querySelector('.step-title');
+          if (n < cur) {
+            icon.className = 'step-icon w-7 h-7 rounded-full bg-success/20 border-2 border-success text-success flex items-center justify-center font-bold text-xs';
+            num.classList.add('hidden'); check.classList.remove('hidden');
+            title.className = 'font-bold text-white step-title';
+          } else if (n === cur) {
+            icon.className = 'step-icon w-7 h-7 rounded-full bg-accent/20 border-2 border-accent text-accent flex items-center justify-center font-bold text-xs animate-pulse';
+            num.classList.remove('hidden'); check.classList.add('hidden');
+            title.className = 'font-bold text-accent step-title';
+          } else {
+            icon.className = 'step-icon w-7 h-7 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-bold text-text-muted text-xs';
+            num.classList.remove('hidden'); check.classList.add('hidden');
+            title.className = 'font-bold text-text-muted step-title';
+          }
+        });
+        updateTrackerBanner(cur);
+      }
+      tick();
+      STATE.trackerTimer = setInterval(tick, 1000);
+    }
+
+    function updateTrackerBanner(curStage = null) {
+      const banner = $('tracker-banner');
+      if (!STATE.activeOrder) { banner.classList.add('hidden'); return; }
+      banner.classList.remove('hidden');
+      const titles = ['Confirmado', 'En comal', STATE.activeOrder.deliveryType === 'delivery' ? 'En camino' : 'Listo p/ recoger', 'Entregado'];
+      const st = curStage || 1;
+      $('tracker-banner-title').textContent = \`\${STATE.activeOrder.id} • \${titles[st - 1] || 'En proceso'}\`;
+    }
+
+    function resetOrder() {
+      if (STATE.trackerTimer) clearInterval(STATE.trackerTimer);
+      STATE.activeOrder = null;
+      Storage.remove(STORAGE_KEYS.ORDER);
+      $('tracker-banner').classList.add('hidden');
+      closeTracker();
+      showToast('Listo para un nuevo pedido', 'info');
+    }
+
+    function requestGPS() {
+      const btn = $('btn-use-gps'), st = $('gps-status');
+      if (!navigator.geolocation) { showToast('Tu navegador no soporta GPS', 'error'); return; }
+      btn.disabled = true; $('gps-btn-label').textContent = 'Obteniendo ubicación...';
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          STATE.gpsCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          btn.disabled = false; $('gps-btn-label').textContent = 'Ubicación GPS obtenida ✓';
+          st.className = 'p-1.5 rounded-lg border bg-success/10 border-success/30 text-success text-[10px] block';
+          st.textContent = \`Coordenadas: \${pos.coords.latitude.toFixed(5)}, \${pos.coords.longitude.toFixed(5)}\`;
+          if (!$('del-colonia').value) $('del-colonia').value = 'Ubicación GPS';
+          showToast('GPS activado', 'success');
+        },
+        err => {
+          btn.disabled = false; $('gps-btn-label').textContent = 'Usar mi ubicación actual (GPS)';
+          st.className = 'p-1.5 rounded-lg border bg-error/10 border-error/30 text-error text-[10px] block';
+          st.textContent = 'Permiso denegado o error de GPS. Por favor escribe tu dirección.';
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+
+    /* 9. ADMIN PANEL & FULL MENU CRUD */
+    function openAdminModal() {
+      const unl = sessionStorage.getItem('taqueria:admin_unlocked') === 'true';
+      const pv = $('admin-pin-view'), cv = $('admin-content-view');
+      if (unl) {
+        pv.classList.add('hidden'); cv.classList.remove('hidden');
+        renderAdminCatalog(); renderAdminCarousel(); populateAdminSettings();
+      } else {
+        pv.classList.remove('hidden'); cv.classList.add('hidden');
+        $('admin-pin-input').value = ''; $('admin-pin-error').classList.add('hidden');
+      }
+      $('modal-admin').classList.remove('hidden');
+      lockScroll(true);
+    }
+    function closeAdminModal() { $('modal-admin').classList.add('hidden'); lockScroll(false); }
+
+    function unlockAdmin() {
+      if ($('admin-pin-input').value.trim() === CONFIG.adminPin) {
+        sessionStorage.setItem('taqueria:admin_unlocked', 'true');
+        $('admin-pin-view').classList.add('hidden');
+        $('admin-content-view').classList.remove('hidden');
+        renderAdminCatalog(); renderAdminCarousel(); populateAdminSettings();
+        showToast('Panel de Administración desbloqueado', 'success');
+      } else {
+        $('admin-pin-error').classList.remove('hidden');
+      }
+    }
+
+    function renderAdminCatalog() {
+      const list = $('admin-catalog-list');
+      const q = (STATE.adminSearchQuery || '').toLowerCase().trim();
+      const cat = STATE.adminFilterCategory || 'all';
+
+      // Update categories dropdown in admin
+      const filterCatEl = $('admin-filter-cat');
+      const allCats = getCategories();
+      const currentFilter = filterCatEl.value || 'all';
+      filterCatEl.innerHTML = '<option value="all">Todas las categorías</option>' + allCats.map(c => \`<option value="\${escapeHtml(c)}">\${escapeHtml(c)}</option>\`).join('');
+      filterCatEl.value = currentFilter;
+
+      const filtered = STATE.menu.filter(it => {
+        const matchesQ = !q || it.name.toLowerCase().includes(q) || (it.description && it.description.toLowerCase().includes(q));
+        const matchesCat = cat === 'all' || it.category === cat;
+        return matchesQ && matchesCat;
+      });
+
+      if (!filtered.length) {
+        list.innerHTML = \`<div class="text-center py-8 text-text-muted bg-bg-surface/30 rounded-xl border border-white/5 space-y-1"><i class="fa-solid fa-burger text-lg"></i><p>No se encontraron platillos con ese filtro.</p></div>\`;
+        return;
+      }
+
+      list.innerHTML = filtered.map(it => {
+        const isAvail = it.available !== false;
+        return \`
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2.5 bg-bg-surface/50 hover:bg-bg-surface/80 rounded-xl border border-white/10 transition-colors">
+            <!-- Left info -->
+            <div class="flex items-center gap-2.5 min-w-0 flex-1">
+              <div class="relative group shrink-0">
+                <img src="\${escapeHtml(it.image)}" alt="" onerror="this.onerror=null;this.src='\${SVG_TACO}'" class="w-12 h-12 rounded-xl object-cover bg-slate-900 border border-white/10" id="prev-\${it.id}">
+                <label class="absolute inset-0 bg-slate-950/75 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-opacity text-white text-[9px] font-bold" title="Cambiar foto de este platillo">
+                  <i class="fa-solid fa-camera text-xs"></i>
+                  <span>Foto</span>
+                  <input type="file" accept="image/*" class="admin-quick-file hidden" data-id="\${it.id}">
+                </label>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <h5 class="font-bold text-white text-xs truncate">\${escapeHtml(it.name)}</h5>
+                  <span class="text-[9px] px-1.5 py-0.2 rounded-full bg-white/10 text-text-muted font-medium">\${escapeHtml(it.category)}</span>
+                </div>
+                <p class="text-[10px] text-text-muted truncate mt-0.5">\${escapeHtml(it.description || 'Sin descripción')}</p>
+              </div>
+            </div>
+
+            <!-- Right controls -->
+            <div class="flex items-center gap-2 shrink-0 justify-between sm:justify-end border-t sm:border-t-0 border-white/5 pt-2 sm:pt-0">
+              <!-- Quick Price Edit -->
+              <div class="flex items-center gap-1 bg-bg-card px-2 py-0.5 rounded-xl border border-white/10" title="Precio en pesos MXN (presiona Enter o sal del campo para guardar)">
+                <span class="text-[10px] text-text-muted font-bold">$</span>
+                <input type="number" step="0.50" min="0" value="\${(it.price / 100).toFixed(2)}" class="admin-quick-price in-fld w-16 py-0.5 px-1 text-center font-extrabold text-gold text-xs" data-id="\${it.id}">
+              </div>
+
+              <!-- Available toggle -->
+              <button type="button" class="btn-toggle-avail text-[10px] px-2 py-1 rounded-lg border font-semibold \${isAvail ? 'bg-success/15 border-success/30 text-success' : 'bg-error/15 border-error/30 text-error'}" data-id="\${it.id}" title="Cambiar estado: Activo o Agotado">
+                \${isAvail ? '<i class="fa-solid fa-check mr-1"></i>Activo' : '<i class="fa-solid fa-ban mr-1"></i>Agotado'}
+              </button>
+
+              <!-- Edit & Delete -->
+              <div class="flex items-center gap-1">
+                <button type="button" class="btn-edit-dish px-2.5 py-1 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-xs transition-colors" data-id="\${it.id}" title="Editar platillo completo"><i class="fa-solid fa-pen-to-square mr-1"></i>Editar</button>
+                <button type="button" class="btn-delete-dish w-7 h-7 rounded-lg bg-red-500/15 hover:bg-red-500/30 text-error border border-red-500/20 flex items-center justify-center transition-colors" data-id="\${it.id}" title="Eliminar platillo"><i class="fa-solid fa-trash-can text-xs"></i></button>
+              </div>
+            </div>
+          </div>\`;
+      }).join('');
+    }
+
+    function renderAdminCarousel() {
+      $('admin-carousel-list').innerHTML = STATE.slides.map((s, i) => \`
+        <div class="flex items-center gap-2 p-1.5 bg-bg-surface/50 rounded-xl border border-white/5">
+          <img src="\${escapeHtml(s.image)}" alt="" onerror="this.onerror=null;this.src='\${SVG_TACO}'" class="w-10 h-10 rounded-lg object-cover bg-slate-900 border border-white/10">
+          <div class="flex-1 min-w-0">
+            <h5 class="font-bold text-white truncate text-[11px]">\${escapeHtml(s.title)}</h5>
+            <p class="text-[10px] text-text-muted truncate">\${escapeHtml(s.subtitle)}</p>
+          </div>
+          <button type="button" class="btn-del-slide text-error hover:text-red-400 p-1.5 rounded-lg hover:bg-white/5" data-index="\${i}" title="Eliminar slide"><i class="fa-solid fa-trash-can text-xs"></i></button>
+        </div>\`).join('');
+    }
+
+    function populateAdminSettings() {
+      $('cfg-name').value = CONFIG.name || '';
+      $('cfg-tagline').value = CONFIG.tagline || '';
+      $('cfg-phone').value = CONFIG.phone || '';
+      $('cfg-whatsapp').value = CONFIG.whatsappNumber || '';
+      $('cfg-address').value = CONFIG.address || '';
+      $('cfg-hours-open').value = CONFIG.hours?.open || '13:00';
+      $('cfg-hours-close').value = CONFIG.hours?.close || '23:00';
+      $('cfg-delivery-fee').value = (CONFIG.deliveryFee || 2500) / 100;
+    }
+
+    function saveAdminSettings() {
+      CONFIG.name = $('cfg-name').value.trim() || CONFIG.name;
+      CONFIG.tagline = $('cfg-tagline').value.trim() || CONFIG.tagline;
+      CONFIG.phone = $('cfg-phone').value.trim() || CONFIG.phone;
+      CONFIG.whatsappNumber = $('cfg-whatsapp').value.replace(/\\D/g, '') || CONFIG.whatsappNumber;
+      CONFIG.address = $('cfg-address').value.trim() || CONFIG.address;
+      CONFIG.hours.open = $('cfg-hours-open').value || CONFIG.hours.open;
+      CONFIG.hours.close = $('cfg-hours-close').value || CONFIG.hours.close;
+      const feeVal = parseFloat($('cfg-delivery-fee').value) || 25;
+      CONFIG.deliveryFee = Math.round(feeVal * 100);
+
+      Storage.set(STORAGE_KEYS.CONFIG, CONFIG);
+      applyConfigToDOM();
+      showToast('Configuración del local guardada', 'success');
+    }
+
+    function applyConfigToDOM() {
+      $('brand-name').textContent = CONFIG.name;
+      $('brand-tagline').textContent = CONFIG.tagline;
+      $('footer-brand').textContent = CONFIG.name;
+      $('copyright-brand').textContent = CONFIG.name;
+      $('footer-tagline').textContent = CONFIG.tagline;
+      $('footer-phone').innerHTML = \`<i class="fa-solid fa-phone mr-1 text-gold"></i> \${escapeHtml(CONFIG.phone)}\`;
+      $('footer-address').innerHTML = \`<i class="fa-solid fa-location-dot mr-1 text-gold"></i> \${escapeHtml(CONFIG.address)}\`;
+      $('footer-hours').innerHTML = \`<i class="fa-regular fa-clock mr-1 text-gold"></i> Lun - Dom: \${escapeHtml(CONFIG.hours.open)} a \${escapeHtml(CONFIG.hours.close)}\`;
+      if (CONFIG.whatsappNumber) {
+        const wa = $('footer-whatsapp');
+        wa.href = \`https://wa.me/\${CONFIG.whatsappNumber}\`;
+        wa.classList.remove('hidden');
+      }
+      renderStatusBadge();
+      renderCartDrawer();
+    }
+
+    /* 10. DISH EDITOR MODAL */
+    let currentDishEditingImage = '';
+
+    function openDishEditor(id = null) {
+      const modal = $('modal-dish-editor');
+      const title = $('dish-modal-title');
+      const catSelect = $('dish-select-category');
+      const newCatInput = $('dish-input-new-category');
+      newCatInput.classList.add('hidden');
+      newCatInput.value = '';
+
+      // Populate category select options
+      const allCats = getCategories();
+      catSelect.innerHTML = allCats.map(c => \`<option value="\${escapeHtml(c)}">\${escapeHtml(c)}</option>\`).join('') +
+        '<option value="__new__">+ Otra Categoría...</option>';
+
+      if (id) {
+        const it = STATE.menu.find(m => m.id === id);
+        if (!it) return;
+        title.innerHTML = \`<i class="fa-solid fa-pen text-gold mr-1"></i> Editar: \${escapeHtml(it.name)}\`;
+        $('dish-edit-id').value = it.id;
+        $('dish-input-name').value = it.name;
+        catSelect.value = it.category;
+        $('dish-input-price').value = (it.price / 100).toFixed(2);
+        $('dish-input-desc').value = it.description || '';
+        $('dish-input-available').checked = it.available !== false;
+
+        currentDishEditingImage = it.image || SVG_TACO;
+        $('dish-preview-img').src = currentDishEditingImage;
+        $('dish-input-url').value = it.image.startsWith('data:') ? '' : it.image;
+
+        const cust = it.customizer || {};
+        $('dish-opt-tortilla').checked = !!cust.tortilla;
+        $('dish-opt-salsas').checked = !!cust.salsas;
+        $('dish-opt-toppings').checked = !!cust.toppings;
+        $('dish-opt-cheese').checked = !!cust.extraCheese;
+        $('dish-opt-flavor').checked = !!cust.flavor;
+      } else {
+        title.innerHTML = '<i class="fa-solid fa-plus-circle text-gold mr-1"></i> Agregar Nuevo Platillo';
+        $('dish-edit-id').value = '';
+        $('dish-input-name').value = '';
+        catSelect.value = 'Tacos';
+        $('dish-input-price').value = '30.00';
+        $('dish-input-desc').value = '';
+        $('dish-input-available').checked = true;
+
+        currentDishEditingImage = SVG_TACO;
+        $('dish-preview-img').src = SVG_TACO;
+        $('dish-input-url').value = '';
+
+        $('dish-opt-tortilla').checked = true;
+        $('dish-opt-salsas').checked = true;
+        $('dish-opt-toppings').checked = true;
+        $('dish-opt-cheese').checked = true;
+        $('dish-opt-flavor').checked = false;
+      }
+
+      $('err-dish-name').classList.add('hidden');
+      $('err-dish-price').classList.add('hidden');
+      modal.classList.remove('hidden');
+      lockScroll(true);
+    }
+
+    function closeDishEditor() {
+      $('modal-dish-editor').classList.add('hidden');
+      lockScroll(false);
+    }
+
+    /* 11. IMAGE HANDLING & COMPRESSION */
+    function downscaleImage(file) {
+      return new Promise((resolve, reject) => {
+        if (!file || !file.type.startsWith('image/')) return reject(new Error('Selecciona un archivo de imagen válido (.jpg, .png)'));
+        if (file.size > 12 * 1024 * 1024) return reject(new Error('La imagen supera 12 MB'));
+        const r = new FileReader();
+        r.onload = e => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width, h = img.height;
+            const maxDim = 800;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+              else { w = Math.round((w * maxDim) / h); h = maxDim; }
+            }
+            const cvs = document.createElement('canvas'); cvs.width = w; cvs.height = h;
+            const ctx = cvs.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(cvs.toDataURL('image/jpeg', 0.75));
+          };
+          img.onerror = () => reject(new Error('Error al procesar la imagen'));
+          img.src = e.target.result;
+        };
+        r.onerror = () => reject(new Error('Error al leer el archivo'));
+        r.readAsDataURL(file);
+      });
+    }
+
+    function verifyUrl(u) {
+      return new Promise((resolve) => {
+        if (!u) return resolve(SVG_TACO);
+        const t = u.trim();
+        // Allow relative paths, images folder, or data urls
+        if (t.startsWith('data:image/') || t.startsWith('imagenes/') || t.startsWith('./') || t.startsWith('/')) {
+          return resolve(t);
+        }
+        resolve(t);
+      });
+    }
+
+    function saveMenu() {
+      Storage.set(STORAGE_KEYS.MENU, STATE.menu);
+      savePhotos();
+    }
+
+    function savePhotos() {
+      const d = { slides: STATE.slides, overrides: {} };
+      STATE.menu.forEach(it => {
+        const def = DEFAULT_CATALOG.find(x => x.id === it.id);
+        if (def && it.image !== def.image) d.overrides[it.id] = it.image;
+      });
+      Storage.set(STORAGE_KEYS.PHOTOS, d);
+    }
+
+    function loadMenu() {
+      const savedMenu = Storage.get(STORAGE_KEYS.MENU);
+      if (Array.isArray(savedMenu) && savedMenu.length > 0) {
+        STATE.menu = savedMenu;
+      } else {
+        STATE.menu = DEFAULT_CATALOG.map(d => ({ ...d }));
+        // Load photo overrides if any
+        const s = Storage.get(STORAGE_KEYS.PHOTOS);
+        if (s?.overrides) {
+          STATE.menu = STATE.menu.map(it => s.overrides[it.id] ? { ...it, image: s.overrides[it.id] } : it);
+        }
+      }
+
+      const s = Storage.get(STORAGE_KEYS.PHOTOS);
+      if (s && Array.isArray(s.slides) && s.slides.length) STATE.slides = s.slides;
+
+      const cfg = Storage.get(STORAGE_KEYS.CONFIG);
+      if (cfg && typeof cfg === 'object') {
+        CONFIG = { ...CONFIG, ...cfg, hours: { ...CONFIG.hours, ...(cfg.hours || {}) } };
+      }
+    }
+
+    function openCart() { renderCartDrawer(); $('slideover-cart').classList.remove('hidden'); lockScroll(true); }
+    function closeCart() { $('slideover-cart').classList.add('hidden'); lockScroll(false); }
+
+    /* 12. EVENTS INITIALIZATION */
+    function initEvents() {
+      let sTimer = null;
+      $('input-search').addEventListener('input', e => {
+        clearTimeout(sTimer); sTimer = setTimeout(() => { STATE.searchQuery = e.target.value; renderMenu(); }, 200);
+      });
+
+      $('category-chips').addEventListener('click', e => {
+        const b = e.target.closest('.chip-cat');
+        if (!b) return;
+        const cat = b.getAttribute('data-cat');
+        STATE.activeCategory = cat; renderCategoryChips();
+        $('sec-' + cat.replace(/\\s+/g, '-').toLowerCase())?.scrollIntoView({ behavior: 'smooth' });
+      });
+
+      window.addEventListener('scroll', () => {
+        let cur = STATE.activeCategory;
+        $$('.menu-sec').forEach(s => {
+          if (s.getBoundingClientRect().top <= 140) cur = s.getAttribute('data-category');
+        });
+        if (cur && cur !== STATE.activeCategory) { STATE.activeCategory = cur; renderCategoryChips(); }
+      }, { passive: true });
+
+      $('menu-container').addEventListener('click', e => {
+        if (e.target.id === 'btn-reset-search') {
+          STATE.searchQuery = ''; $('input-search').value = ''; renderMenu(); return;
+        }
+        const card = e.target.closest('.card-item');
+        if (card) {
+          if (card.getAttribute('data-available') === 'false') {
+            showToast('Este platillo está agotado temporalmente.', 'error');
+            return;
+          }
+          openCustomizer(card.getAttribute('data-id'));
+        }
+      });
+
+      $('carousel-prev').addEventListener('click', () => setSlide(STATE.slideIndex - 1));
+      $('carousel-next').addEventListener('click', () => setSlide(STATE.slideIndex + 1));
+      $('carousel-indicators').addEventListener('click', e => {
+        const b = e.target.closest('button');
+        if (b) setSlide(parseInt(b.getAttribute('data-slide'), 10));
+      });
+
+      const hero = $('hero');
+      hero.addEventListener('mouseenter', stopCarousel); hero.addEventListener('mouseleave', startCarousel);
+      hero.addEventListener('focusin', stopCarousel); hero.addEventListener('focusout', startCarousel);
+      document.addEventListener('visibilitychange', () => document.hidden ? stopCarousel() : startCarousel());
+
+      let tx = 0;
+      hero.addEventListener('touchstart', e => { tx = e.changedTouches[0].screenX; }, { passive: true });
+      hero.addEventListener('touchend', e => {
+        const diff = tx - e.changedTouches[0].screenX;
+        if (diff > 50) setSlide(STATE.slideIndex + 1); if (diff < -50) setSlide(STATE.slideIndex - 1);
+      }, { passive: true });
+
+      window.addEventListener('keydown', e => {
+        if (e.key === 'ArrowLeft' && !document.querySelector('input:focus, textarea:focus')) setSlide(STATE.slideIndex - 1);
+        if (e.key === 'ArrowRight' && !document.querySelector('input:focus, textarea:focus')) setSlide(STATE.slideIndex + 1);
+      });
+
+      $('btn-qty-minus').addEventListener('click', () => {
+        const q = $('customizer-qty'); let v = parseInt(q.textContent, 10) || 1;
+        if (v > 1) { q.textContent = --v; updateCustomizerLiveTotal(); }
+      });
+      $('btn-qty-plus').addEventListener('click', () => {
+        const q = $('customizer-qty'); let v = parseInt(q.textContent, 10) || 1;
+        if (v < CONFIG.maxQtyPerLine) { q.textContent = ++v; updateCustomizerLiveTotal(); }
+      });
+      $('btn-close-customizer').addEventListener('click', closeCustomizer);
+      $('btn-customizer-submit').addEventListener('click', commitCustomizer);
+
+      $('btn-open-cart').addEventListener('click', openCart);
+      $('btn-close-cart').addEventListener('click', closeCart);
+      $('btn-clear-cart').addEventListener('click', () => {
+        openDialog({
+          title: '¿Vaciar carrito?', message: 'Se eliminarán todos los productos agregados.', confirmText: 'Sí, vaciar',
+          onConfirm: () => { STATE.cart = []; Storage.set(STORAGE_KEYS.CART, []); renderCartDrawer(); showToast('Carrito vaciado', 'info'); }
+        });
+      });
+
+      $('cart-items-container').addEventListener('click', e => {
+        if (e.target.id === 'btn-back-to-menu') { closeCart(); $('menu-container').scrollIntoView({ behavior: 'smooth' }); return; }
+        const p = e.target.closest('.btn-cart-plus');
+        if (p) {
+          const i = parseInt(p.getAttribute('data-index'), 10);
+          if (STATE.cart[i] && STATE.cart[i].quantity < CONFIG.maxQtyPerLine) { STATE.cart[i].quantity++; Storage.set(STORAGE_KEYS.CART, STATE.cart); renderCartDrawer(); }
+          return;
+        }
+        const m = e.target.closest('.btn-cart-minus');
+        if (m) {
+          const i = parseInt(m.getAttribute('data-index'), 10);
+          if (STATE.cart[i]) {
+            if (STATE.cart[i].quantity > 1) STATE.cart[i].quantity--; else STATE.cart.splice(i, 1);
+            Storage.set(STORAGE_KEYS.CART, STATE.cart); renderCartDrawer();
+          }
+          return;
+        }
+        const r = e.target.closest('.btn-cart-remove');
+        if (r) {
+          const i = parseInt(r.getAttribute('data-index'), 10);
+          STATE.cart.splice(i, 1); Storage.set(STORAGE_KEYS.CART, STATE.cart); renderCartDrawer(); showToast('Platillo eliminado del carrito', 'info'); return;
+        }
+        const ed = e.target.closest('.btn-cart-edit');
+        if (ed) {
+          const i = parseInt(ed.getAttribute('data-index'), 10), l = STATE.cart[i];
+          if (l) { closeCart(); openCustomizer(l.itemId, i); }
+        }
+      });
+
+      $('btn-start-checkout').addEventListener('click', openCheckout);
+      $('btn-close-checkout').addEventListener('click', closeCheckout);
+      $('type-delivery').addEventListener('click', () => setDeliveryType('delivery'));
+      $('type-pickup').addEventListener('click', () => setDeliveryType('pickup'));
+      $('btn-use-gps').addEventListener('click', requestGPS);
+      $('pay-method-card').addEventListener('click', () => setPaymentMethod('card'));
+      $('pay-method-cash').addEventListener('click', () => setPaymentMethod('cash'));
+
+      $('card-number').addEventListener('input', e => {
+        let v = e.target.value.replace(/\\D/g, '').slice(0, 16);
+        e.target.value = v.match(/.{1,4}/g)?.join(' ') || v;
+      });
+      $('card-expiry').addEventListener('input', e => {
+        let v = e.target.value.replace(/\\D/g, '').slice(0, 4);
+        if (v.length >= 2) v = v.slice(0, 2) + '/' + v.slice(2);
+        e.target.value = v;
+      });
+      $('cash-amount').addEventListener('input', updateCashChange);
+      $('quick-cash-buttons').addEventListener('click', e => {
+        const b = e.target.closest('button');
+        if (!b) return;
+        const v = b.getAttribute('data-val'), { total } = calculateCart();
+        $('cash-amount').value = v === 'exact' ? (total / 100).toFixed(2) : v;
+        updateCashChange();
+      });
+
+      $('btn-checkout-back').addEventListener('click', () => setCheckoutStep(1));
+      $('btn-checkout-next').addEventListener('click', () => {
+        const is1 = !$('step-delivery').classList.contains('hidden');
+        if (is1) { if (validateStep1()) setCheckoutStep(2); } else submitCheckout();
+      });
+
+      $('btn-open-tracker').addEventListener('click', openTracker);
+      $('btn-close-tracker').addEventListener('click', closeTracker);
+      $('btn-new-order').addEventListener('click', resetOrder);
+
+      $('dialog-confirm').addEventListener('click', () => { if (STATE.dialogCallback) STATE.dialogCallback(); closeDialog(); });
+      $('dialog-cancel').addEventListener('click', closeDialog);
+
+      /* Admin Navigation & PIN */
+      $('btn-admin').addEventListener('click', openAdminModal);
+      $('btn-close-admin').addEventListener('click', closeAdminModal);
+      $('btn-verify-pin').addEventListener('click', unlockAdmin);
+      $('admin-pin-input').addEventListener('keydown', e => { if (e.key === 'Enter') unlockAdmin(); });
+
+      const tabC = $('tab-btn-carousel'), tabK = $('tab-btn-catalog'), tabS = $('tab-btn-settings');
+      const viewC = $('tab-view-carousel'), viewK = $('tab-view-catalog'), viewS = $('tab-view-settings');
+      
+      tabK.addEventListener('click', () => {
+        tabK.className = 'px-2.5 py-1.5 rounded-lg border-b-2 border-primary text-white flex items-center gap-1.5';
+        tabC.className = 'px-2.5 py-1.5 rounded-lg border-b-2 border-transparent text-text-muted hover:text-white flex items-center gap-1.5';
+        tabS.className = 'px-2.5 py-1.5 rounded-lg border-b-2 border-transparent text-text-muted hover:text-white flex items-center gap-1.5';
+        viewK.classList.remove('hidden'); viewC.classList.add('hidden'); viewS.classList.add('hidden');
+      });
+      tabC.addEventListener('click', () => {
+        tabC.className = 'px-2.5 py-1.5 rounded-lg border-b-2 border-primary text-white flex items-center gap-1.5';
+        tabK.className = 'px-2.5 py-1.5 rounded-lg border-b-2 border-transparent text-text-muted hover:text-white flex items-center gap-1.5';
+        tabS.className = 'px-2.5 py-1.5 rounded-lg border-b-2 border-transparent text-text-muted hover:text-white flex items-center gap-1.5';
+        viewC.classList.remove('hidden'); viewK.classList.add('hidden'); viewS.classList.add('hidden');
+      });
+      tabS.addEventListener('click', () => {
+        tabS.className = 'px-2.5 py-1.5 rounded-lg border-b-2 border-primary text-white flex items-center gap-1.5';
+        tabK.className = 'px-2.5 py-1.5 rounded-lg border-b-2 border-transparent text-text-muted hover:text-white flex items-center gap-1.5';
+        tabC.className = 'px-2.5 py-1.5 rounded-lg border-b-2 border-transparent text-text-muted hover:text-white flex items-center gap-1.5';
+        viewS.classList.remove('hidden'); viewK.classList.add('hidden'); viewC.classList.add('hidden');
+      });
+
+      $('btn-save-settings').addEventListener('click', saveAdminSettings);
+
+      /* Admin Search & Category Filter */
+      let admTimer = null;
+      $('admin-search-dish').addEventListener('input', e => {
+        clearTimeout(admTimer);
+        admTimer = setTimeout(() => { STATE.adminSearchQuery = e.target.value; renderAdminCatalog(); }, 150);
+      });
+      $('admin-filter-cat').addEventListener('change', e => {
+        STATE.adminFilterCategory = e.target.value;
+        renderAdminCatalog();
+      });
+
+      /* Quick Price Change inside Admin List */
+      $('admin-catalog-list').addEventListener('change', e => {
+        if (e.target.classList.contains('admin-quick-price')) {
+          const id = e.target.getAttribute('data-id');
+          const val = parseFloat(e.target.value);
+          const it = STATE.menu.find(m => m.id === id);
+          if (it && !isNaN(val) && val >= 0) {
+            it.price = Math.round(val * 100);
+            saveMenu();
+            renderMenu();
+            showToast(\`Precio de "\${it.name}" actualizado a \${formatMoney(it.price)}\`, 'success');
+          }
+        }
+      });
+      $('admin-catalog-list').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && e.target.classList.contains('admin-quick-price')) {
+          e.target.blur();
+        }
+      });
+
+      /* Quick Photo Upload from Admin List */
+      $('admin-catalog-list').addEventListener('change', async e => {
+        const fileIn = e.target.closest('.admin-quick-file');
+        if (fileIn?.files?.[0]) {
+          const id = fileIn.getAttribute('data-id');
+          try {
+            const dataUrl = await downscaleImage(fileIn.files[0]);
+            const it = STATE.menu.find(m => m.id === id);
+            if (it) {
+              it.image = dataUrl;
+              saveMenu();
+              renderMenu();
+              $('prev-' + id).src = dataUrl;
+              showToast(\`Foto actualizada: \${it.name}\`, 'success');
+            }
+          } catch(err) { showToast(err.message, 'error'); }
+        }
+      });
+
+      /* Availability Toggle Button */
+      $('admin-catalog-list').addEventListener('click', e => {
+        const btn = e.target.closest('.btn-toggle-avail');
+        if (!btn) return;
+        const id = btn.getAttribute('data-id');
+        const it = STATE.menu.find(m => m.id === id);
+        if (it) {
+          it.available = !(it.available !== false);
+          saveMenu();
+          renderMenu();
+          renderAdminCatalog();
+          showToast(\`\${it.name}: \${it.available ? 'Activado' : 'Marcado como Agotado'}\`, it.available ? 'success' : 'info');
+        }
+      });
+
+      /* Edit Dish Button */
+      $('admin-catalog-list').addEventListener('click', e => {
+        const btn = e.target.closest('.btn-edit-dish');
+        if (btn) openDishEditor(btn.getAttribute('data-id'));
+      });
+
+      /* Delete Dish Button */
+      $('admin-catalog-list').addEventListener('click', e => {
+        const btn = e.target.closest('.btn-delete-dish');
+        if (!btn) return;
+        const id = btn.getAttribute('data-id');
+        const it = STATE.menu.find(m => m.id === id);
+        if (!it) return;
+
+        openDialog({
+          title: '¿Eliminar platillo?',
+          message: \`¿Estás seguro de que deseas eliminar "\${it.name}" del menú? Esta acción no se puede deshacer.\`,
+          confirmText: 'Sí, eliminar',
+          onConfirm: () => {
+            STATE.menu = STATE.menu.filter(m => m.id !== id);
+            STATE.cart = STATE.cart.filter(c => c.itemId !== id);
+            Storage.set(STORAGE_KEYS.CART, STATE.cart);
+            saveMenu();
+            renderCategoryChips();
+            renderMenu();
+            renderCartDrawer();
+            renderAdminCatalog();
+            showToast(\`Platillo "\${it.name}" eliminado del menú\`, 'info');
+          }
+        });
+      });
+
+      /* Reset entire menu to defaults */
+      $('btn-reset-entire-menu').addEventListener('click', () => {
+        openDialog({
+          title: '¿Restaurar menú original?',
+          message: 'Se restablecerán todos los platillos, precios y fotos por defecto iniciales.',
+          confirmText: 'Sí, restaurar',
+          onConfirm: () => {
+            STATE.menu = DEFAULT_CATALOG.map(d => ({ ...d }));
+            Storage.remove(STORAGE_KEYS.MENU);
+            Storage.remove(STORAGE_KEYS.PHOTOS);
+            saveMenu();
+            renderCategoryChips();
+            renderMenu();
+            renderAdminCatalog();
+            showToast('Menú original restablecido', 'info');
+          }
+        });
+      });
+
+      /* Dish Modal controls */
+      $('btn-open-add-dish').addEventListener('click', () => openDishEditor(null));
+      $('btn-close-dish-modal').addEventListener('click', closeDishEditor);
+      $('btn-cancel-dish').addEventListener('click', closeDishEditor);
+
+      $('dish-select-category').addEventListener('change', e => {
+        const isNew = e.target.value === '__new__';
+        $('dish-input-new-category').classList.toggle('hidden', !isNew);
+        if (isNew) $('dish-input-new-category').focus();
+      });
+
+      // Dish Editor Photo File Upload
+      $('dish-input-file').addEventListener('change', async e => {
+        if (e.target.files?.[0]) {
+          try {
+            const dataUrl = await downscaleImage(e.target.files[0]);
+            currentDishEditingImage = dataUrl;
+            $('dish-preview-img').src = dataUrl;
+            $('dish-input-url').value = '';
+            showToast('Foto cargada correctamente', 'success');
+          } catch(err) { showToast(err.message, 'error'); }
+        }
+      });
+
+      // Dish Editor Photo URL / Path input
+      $('dish-input-url').addEventListener('input', async e => {
+        const val = e.target.value.trim();
+        if (val) {
+          const verified = await verifyUrl(val);
+          currentDishEditingImage = verified;
+          $('dish-preview-img').src = verified;
+        }
+      });
+
+      $('btn-dish-reset-photo').addEventListener('click', () => {
+        currentDishEditingImage = SVG_TACO;
+        $('dish-preview-img').src = SVG_TACO;
+        $('dish-input-url').value = '';
+        $('dish-input-file').value = '';
+      });
+
+      // Form Submit for Dish Editor (Add or Edit)
+      $('form-dish-editor').addEventListener('submit', async e => {
+        e.preventDefault();
+        const id = $('dish-edit-id').value;
+        const name = $('dish-input-name').value.trim();
+        const catSelect = $('dish-select-category').value;
+        const newCat = $('dish-input-new-category').value.trim();
+        const category = catSelect === '__new__' ? (newCat || 'Varios') : catSelect;
+        const priceVal = parseFloat($('dish-input-price').value);
+        const desc = $('dish-input-desc').value.trim();
+        const available = $('dish-input-available').checked;
+
+        if (!name) { $('err-dish-name').classList.remove('hidden'); return; }
+        if (isNaN(priceVal) || priceVal < 0) { $('err-dish-price').classList.remove('hidden'); return; }
+
+        const customizer = {};
+        if ($('dish-opt-tortilla').checked) customizer.tortilla = true;
+        if ($('dish-opt-salsas').checked) customizer.salsas = true;
+        if ($('dish-opt-toppings').checked) customizer.toppings = true;
+        if ($('dish-opt-cheese').checked) customizer.extraCheese = true;
+        if ($('dish-opt-flavor').checked) customizer.flavor = true;
+
+        let finalImage = currentDishEditingImage || SVG_TACO;
+        const urlTyped = $('dish-input-url').value.trim();
+        if (urlTyped) finalImage = await verifyUrl(urlTyped);
+
+        if (id) {
+          // Edit existing
+          const it = STATE.menu.find(m => m.id === id);
+          if (it) {
+            it.name = name;
+            it.category = category;
+            it.price = Math.round(priceVal * 100);
+            it.description = desc;
+            it.available = available;
+            it.image = finalImage;
+            it.customizer = customizer;
+            showToast(\`Platillo "\${it.name}" actualizado\`, 'success');
+          }
+        } else {
+          // Create new dish
+          const newId = 'dish-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6);
+          const newDish = {
+            id: newId,
+            name,
+            category,
+            price: Math.round(priceVal * 100),
+            description: desc,
+            available,
+            image: finalImage,
+            customizer
+          };
+          STATE.menu.push(newDish);
+          showToast(\`¡Nuevo platillo "\${name}" agregado!\`, 'success');
+        }
+
+        saveMenu();
+        renderCategoryChips();
+        renderMenu();
+        renderAdminCatalog();
+        closeDishEditor();
+      });
+
+      /* Carousel management in Admin */
+      $('btn-add-slide').addEventListener('click', async () => {
+        const title = $('new-slide-title').value.trim();
+        const subtitle = $('new-slide-subtitle').value.trim();
+        const url = $('new-slide-url').value.trim();
+        const file = $('new-slide-file').files?.[0];
+        const err = $('new-slide-error');
+
+        if (!title) { err.textContent = 'Título requerido'; err.classList.remove('hidden'); return; }
+        try {
+          let img = '';
+          if (file) img = await downscaleImage(file);
+          else if (url) img = await verifyUrl(url);
+          else { err.textContent = 'Sube un archivo o ingresa una URL/ruta'; err.classList.remove('hidden'); return; }
+
+          err.classList.add('hidden');
+          STATE.slides.push({ id: 's-' + Date.now().toString(36), title, subtitle, image: img });
+          savePhotos(); renderAdminCarousel(); renderCarousel();
+          $('new-slide-title').value = ''; $('new-slide-subtitle').value = '';
+          $('new-slide-url').value = ''; $('new-slide-file').value = '';
+          showToast('Diapositiva agregada con éxito', 'success');
+        } catch(e) { err.textContent = e.message; err.classList.remove('hidden'); }
+      });
+
+      $('admin-carousel-list').addEventListener('click', e => {
+        const b = e.target.closest('.btn-del-slide');
+        if (!b) return;
+        const i = parseInt(b.getAttribute('data-index'), 10);
+        if (STATE.slides.length <= 1) { showToast('Debe haber al menos una diapositiva en el banner', 'error'); return; }
+        STATE.slides.splice(i, 1);
+        if (STATE.slideIndex >= STATE.slides.length) STATE.slideIndex = 0;
+        savePhotos(); renderAdminCarousel(); renderCarousel();
+        showToast('Diapositiva eliminada', 'info');
+      });
+
+      $('btn-reset-carousel-defaults').addEventListener('click', () => {
+        STATE.slides = [...DEFAULT_SLIDES]; STATE.slideIndex = 0; savePhotos(); renderAdminCarousel(); renderCarousel(); showToast('Banners restaurados', 'info');
+      });
+
+      /* Modal Backdrop Click and Escape handling */
+      const modalList = [
+        { id: 'modal-customizer', fn: closeCustomizer },
+        { id: 'slideover-cart', fn: closeCart },
+        { id: 'modal-checkout', fn: closeCheckout },
+        { id: 'modal-tracker', fn: closeTracker },
+        { id: 'modal-admin', fn: closeAdminModal },
+        { id: 'modal-dish-editor', fn: closeDishEditor },
+        { id: 'custom-dialog', fn: closeDialog }
+      ];
+      modalList.forEach(m => {
+        const el = $(m.id);
+        el.addEventListener('click', e => { if (e.target === el) m.fn(); });
+      });
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+          for (let i = modalList.length - 1; i >= 0; i--) {
+            const el = $(modalList[i].id);
+            if (el && !el.classList.contains('hidden')) { modalList[i].fn(); break; }
+          }
+        }
+      });
+    }
+
+    /* 13. INIT */
+    document.addEventListener('DOMContentLoaded', () => {
+      loadMenu();
+
+      const savedCart = Storage.get(STORAGE_KEYS.CART);
+      if (Array.isArray(savedCart)) STATE.cart = savedCart;
+
+      applyConfigToDOM();
+      renderCategoryChips();
+      renderMenu();
+      renderCarousel();
+      renderCartDrawer();
+      checkActiveOrder();
+      startCarousel();
+      initEvents();
+    });
+  </script>
+</body>
+</html>`;
+
+fs.writeFileSync('index.html', finalHtml);
+console.log('Update complete! Written to index.html with length:', finalHtml.length);
