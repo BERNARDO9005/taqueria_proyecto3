@@ -1795,7 +1795,7 @@
       $('dialog-cancel').addEventListener('click', closeDialog);
 
       /* Admin Navigation & PIN */
-      $('btn-admin').addEventListener('click', openAdminModal);
+      // btn-admin opens admin.html in target="_blank"
       $('btn-close-admin').addEventListener('click', closeAdminModal);
       $('btn-verify-pin').addEventListener('click', unlockAdmin);
       $('admin-pin-input').addEventListener('keydown', e => { if (e.key === 'Enter') unlockAdmin(); });
@@ -2122,6 +2122,17 @@
       checkActiveOrder();
       startCarousel();
       initEvents();
+
+      // Sincronización en tiempo real con admin.html
+      window.addEventListener('storage', (e) => {
+        if (e.key === STORAGE_KEYS.MENU || e.key === STORAGE_KEYS.PHOTOS || e.key === STORAGE_KEYS.CONFIG) {
+          loadMenu();
+          applyConfigToDOM();
+          renderCategoryChips();
+          renderMenu();
+          renderCarousel();
+        }
+      });
     });
   </script>
 </body>
