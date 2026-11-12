@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="es-MX" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración | Taquería El Buen Taquito</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'bg-page': '#0b0f19',
+            'bg-surface': '#111827',
+            'bg-card': '#1f2937',
+            'bg-card-hover': '#283548',
+            primary: '#2563eb',
+            'primary-hover': '#1d4ed8',
+            accent: '#0ea5e9',
+            gold: '#fbbf24',
+            'gold-strong': '#f59e0b',
+            text: '#f1f5f9',
+            'text-muted': '#9ca3af',
+            success: '#22c55e',
+            error: '#ef4444'
+          },
+          fontFamily: { sans: ['Inter', 'sans-serif'] }
+        }
+      }
+    };
+  </script>
+  <style>
+    .no-sb::-webkit-scrollbar { display: none; }
+    .no-sb { -ms-overflow-style: none; scrollbar-width: none; }
+    .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); background: rgba(31, 41, 55, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }
+    .in-fld { width: 100%; padding: 0.5rem 0.85rem; background: #0b0f19; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 0.75rem; color: #f1f5f9; font-size: 0.85rem; outline: none; transition: all 0.2s; }
+    .in-fld:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25); }
+    .btn-p { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; font-weight: 600; border-radius: 0.75rem; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+    .btn-p:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); transform: translateY(-1px); }
+    .btn-gold { background: linear-gradient(135deg, #fbbf24, #d97706); color: #0b0f19; font-weight: 700; border-radius: 0.75rem; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+    .btn-gold:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    @keyframes pulse-ring { 0% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 0.4; } 100% { transform: scale(0.95); opacity: 0.8; } }
+    .pulse-dot { animation: pulse-ring 2s infinite ease-in-out; }
+  </style>
+</head>
+<body class="bg-bg-page text-text font-sans min-h-screen flex flex-col antialiased selection:bg-primary selection:text-white">
+
+  <!-- ========================================== -->
+  <!-- 1. PANTALLA DE SEGURIDAD (ACCESO CON PIN)  -->
+  <!-- ========================================== -->
+  <div id="pin-screen" class="fixed inset-0 z-50 bg-bg-page/95 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass w-full max-w-sm rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-5 border border-white/10">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-gold/15 text-gold flex items-center justify-center text-3xl shadow-lg border border-gold/20">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-extrabold text-white">Panel de Administración</h1>
+        <p class="text-xs text-text-muted mt-1">Taquería El Buen Taquito</p>
+        <p class="text-xs text-text-muted mt-2">Ingresa tu PIN de seguridad para gestionar menú, precios y pedidos.</p>
+      </div>
+
+      <!-- Indicadores visuales de PIN -->
+      <div class="flex justify-center items-center gap-3 py-1">
+        <div id="dot-0" class="w-3.5 h-3.5 rounded-full border-2 border-white/30 transition-all duration-200"></div>
+        <div id="dot-1" class="w-3.5 h-3.5 rounded-full border-2 border-white/30 transition-all duration-200"></div>
+        <div id="dot-2" class="w-3.5 h-3.5 rounded-full border-2 border-white/30 transition-all duration-200"></div>
+        <div id="dot-3" class="w-3.5 h-3.5 rounded-full border-2 border-white/30 transition-all duration-200"></div>
+      </div>
+
+      <!-- Input invisible para teclado físico y campo numérico -->
+      <div class="relative">
+        <input type="password" id="pin-input-field" maxlength="6" inputmode="numeric" autocomplete="off" placeholder="••••" class="in-fld text-center text-2xl font-mono tracking-[0.5em] py-2.5">
+      </div>
+      <p id="pin-error-msg" class="text-error text-xs hidden font-medium"><i class="fa-solid fa-triangle-exclamation mr-1"></i>PIN incorrecto. Intenta nuevamente.</p>
+
+      <!-- Teclado Numérico Táctil (ideal para celulares y tabletas) -->
+      <div class="grid grid-cols-3 gap-2.5 pt-2">
+        <button type="button" class="numpad-btn p-3.5 rounded-xl bg-bg-card hover:bg-bg-card-hover text-white font-bold text-lg border border-white/5 active:scale-95 transition-all" data-val="1">1</button>
+        <button type="button" class="numpad-btn p-3.5 rounded-xl bg-bg-card hover:bg-bg-card-hover text-white font-bold text-lg border border-white/5 active:scale-95 transition-all" data-val="2">2</button>
+        <button type="button" class="numpad-btn p-3.5 rounded-xl bg-bg-card hover:bg-bg-card-hover text-white font-bold text-lg border border-white/5 active:scale-95 transition-all" data-val="3">3</button>
+        <button type="button" class="numpad-btn p-3.5 rounded-xl bg-bg-card hover:bg-bg-card-hover text-white font-bold text-lg border border-white/5 active:scale-95 transition-all" data-val="4">4</button>
+        <button type="button" class="numpad-btn p-3.5 rounded-xl bg-bg-card hover:bg-bg-card-hover text-white font-bold text-lg border border-white/5 active:scale-95 transition-all" data-val="5">5</button>
+        <button type="button" class="numpad-btn p-3.5 rounded-xl bg-bg-card hover:bg-bg-card-hover text-white font-bold text-lg border border-white/5 active:scale-95 transition-all" data-val="6">6</button>
+        <button type="button" class="numpad-btn p-3.5 rounded-xl bg-bg-card hover:bg-bg-card-hover text-white font-bold text-lg border border-white/5 active:scale-95 transition-all" data-val="7">7</button>
+        <button type="button" class="numpad-btn p-3.5 rounded-xl bg-bg-card hover:bg-bg-card-hover text-white font-bold text-lg border border-white/5 active:scale-95 transition-all" data-val="8">8</button>
+        <button type="button" class="numpad-btn p-3.5 rounded-xl bg-bg-card hover:bg-bg-card-hover text-white font-bold text-lg border border-white/5 active:scale-95 transition-all" data-val="9">9</button>
+        <button type="button" id="numpad-clear" class="p-3.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-error font-semibold text-xs border border-red-500/20 active:scale-95 transition-all">BORRAR</button>
+        <button type="button" class="numpad-btn p-3.5 rounded-xl bg-bg-card hover:bg-bg-card-hover text-white font-bold text-lg border border-white/5 active:scale-95 transition-all" data-val="0">0</button>
+        <button type="button" id="numpad-backspace" class="p-3.5 rounded-xl bg-bg-card hover:bg-bg-card-hover text-text-muted font-bold text-lg border border-white/5 active:scale-95 transition-all"><i class="fa-solid fa-delete-left"></i></button>
+      </div>
+
+      <div class="pt-2 flex flex-col gap-2">
+        <button type="button" id="btn-unlock-panel" class="w-full btn-gold py-3 text-sm shadow-xl">
+          <i class="fa-solid fa-key"></i> Desbloquear Panel
+        </button>
+        <a href="index.html" class="inline-flex items-center justify-center gap-1.5 text-xs text-text-muted hover:text-white transition-colors py-1.5">
+          <i class="fa-solid fa-arrow-left"></i> Volver a la Vista de Clientes
+        </a>
+      </div>
+
+      <p class="text-[10px] text-text-muted/60 border-t border-white/5 pt-3">
+        PIN de fábrica inicial: <span class="font-mono text-gold font-bold">1234</span> (puedes cambiarlo en Configuración).
+      </p>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 2. NAVBAR SUPERIOR DEL ADMINISTRADOR      -->
+  <!-- ========================================== -->
+  <header class="sticky top-0 z-40 bg-bg-surface/90 backdrop-blur-md border-b border-white/10 px-4 py-3">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <!-- Marca y Estado -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-gold to-gold-strong text-slate-950 flex items-center justify-center text-lg font-black shadow-md">
+          <i class="fa-solid fa-fire"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 id="admin-header-title" class="text-sm sm:text-base font-extrabold text-white leading-tight">Taquería El Buen Taquito</h1>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/20 text-accent border border-primary/30 uppercase tracking-wider">Admin</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-text-muted mt-0.5">
+            <span class="inline-flex items-center gap-1 text-[11px] text-success">
+              <span class="w-2 h-2 rounded-full bg-success pulse-dot"></span> Modo Administración Activo
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones de Navegación Rápida -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Ir al Menú Cliente -->
+        <a href="index.html" target="_blank" class="px-3 py-1.5 rounded-xl bg-bg-card hover:bg-bg-card-hover text-white text-xs font-semibold border border-white/10 flex items-center gap-1.5 shadow-sm transition-all" title="Ver cómo ven la página los clientes">
+          <i class="fa-solid fa-store text-gold text-xs"></i>
+          <span class="hidden md:inline">Ver Tienda de Clientes</span>
+          <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-text-muted"></i>
+        </a>
+
+        <!-- Botón Salir / Bloquear -->
+        <button type="button" id="btn-lock-panel" class="px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-error border border-red-500/20 text-xs font-semibold flex items-center gap-1.5 transition-all" title="Bloquear panel">
+          <i class="fa-solid fa-lock text-xs"></i>
+          <span class="hidden sm:inline">Cerrar Sesión</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================== -->
+  <!-- 3. BARRA DE PESTAÑAS PRINCIPALES           -->
+  <!-- ========================================== -->
+  <nav class="bg-bg-surface/50 border-b border-white/5 px-4 sticky top-[65px] z-30 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 overflow-x-auto no-sb py-2 text-xs font-bold">
+      <button type="button" id="nav-tab-catalog" class="admin-tab-btn px-3.5 py-2 rounded-xl bg-primary text-white flex items-center gap-2 shrink-0 transition-all">
+        <i class="fa-solid fa-utensils"></i> Platillos y Precios
+      </button>
+      <button type="button" id="nav-tab-carousel" class="admin-tab-btn px-3.5 py-2 rounded-xl text-text-muted hover:text-white hover:bg-white/5 flex items-center gap-2 shrink-0 transition-all">
+        <i class="fa-solid fa-images"></i> Banners y Carrusel
+      </button>
+      <button type="button" id="nav-tab-settings" class="admin-tab-btn px-3.5 py-2 rounded-xl text-text-muted hover:text-white hover:bg-white/5 flex items-center gap-2 shrink-0 transition-all">
+        <i class="fa-solid fa-sliders"></i> Datos del Local y PIN
+      </button>
+      <button type="button" id="nav-tab-kitchen" class="admin-tab-btn px-3.5 py-2 rounded-xl text-text-muted hover:text-white hover:bg-white/5 flex items-center gap-2 shrink-0 transition-all">
+        <i class="fa-solid fa-bell-concierge text-gold"></i> Comandera / Cocina <span class="text-[9px] px-1.5 py-0.2 rounded-full bg-gold/20 text-gold border border-gold/30">Paso 2</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ========================================== -->
+  <!-- 4. CONTENIDO PRINCIPAL                     -->
+  <!-- ========================================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+    <!-- ===================================================== -->
+    <!-- VISTA 1: PLATILLOS Y PRECIOS (CATÁLOGO + EXISTENCIAS) -->
+    <!-- ===================================================== -->
+    <section id="view-catalog" class="space-y-5">
+      <!-- Tarjetas de Estadísticas / KPI -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="glass p-3.5 rounded-2xl flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-accent flex items-center justify-center text-lg"><i class="fa-solid fa-burger"></i></div>
+          <div>
+            <p class="text-[11px] text-text-muted font-medium">Total Platillos</p>
+            <p id="kpi-total-dishes" class="text-lg font-black text-white">0</p>
+          </div>
+        </div>
+        <div class="glass p-3.5 rounded-2xl flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-green-500/20 text-success flex items-center justify-center text-lg"><i class="fa-solid fa-check"></i></div>
+          <div>
+            <p class="text-[11px] text-text-muted font-medium">Activos en Menú</p>
+            <p id="kpi-active-dishes" class="text-lg font-black text-success">0</p>
+          </div>
+        </div>
+        <div class="glass p-3.5 rounded-2xl flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-red-500/20 text-error flex items-center justify-center text-lg"><i class="fa-solid fa-ban"></i></div>
+          <div>
+            <p class="text-[11px] text-text-muted font-medium">Agotados / Pausa</p>
+            <p id="kpi-soldout-dishes" class="text-lg font-black text-error">0</p>
+          </div>
+        </div>
+        <div class="glass p-3.5 rounded-2xl flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-gold flex items-center justify-center text-lg"><i class="fa-solid fa-tags"></i></div>
+          <div>
+            <p class="text-[11px] text-text-muted font-medium">Categorías</p>
+            <p id="kpi-categories" class="text-lg font-black text-gold">0</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Acciones y Filtros -->
+      <div class="glass p-4 rounded-2xl space-y-3">
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <!-- Búsqueda y Filtro de Categoría -->
+          <div class="flex flex-1 items-center gap-2">
+            <div class="relative flex-1">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-xs"></i>
+              <input type="text" id="admin-search-input" placeholder="Buscar platillo por nombre o ingredientes..." class="in-fld pl-9 py-2 text-xs w-full">
+            </div>
+            <select id="admin-category-filter" class="in-fld py-2 text-xs w-auto max-w-[180px] shrink-0 font-medium">
+              <option value="all">Todas las categorías</option>
+            </select>
+          </div>
+
+          <!-- Botones de Acción -->
+          <div class="flex items-center gap-2 shrink-0">
+            <button type="button" id="btn-open-new-dish" class="btn-p py-2 px-4 text-xs font-bold shadow-lg shadow-primary/20">
+              <i class="fa-solid fa-plus"></i> + Nuevo Platillo
+            </button>
+            <button type="button" id="btn-reset-menu" class="px-3 py-2 rounded-xl bg-bg-card hover:bg-bg-card-hover text-gold border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition-colors" title="Restaurar el catálogo original de fábrica">
+              <i class="fa-solid fa-rotate-left"></i> <span class="hidden sm:inline">Restaurar Menú</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Banner de Ayuda Rápida -->
+        <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-accent/10 border border-accent/20 text-[11px] text-accent/90">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-lightbulb text-accent text-sm shrink-0"></i>
+            <span>
+              <b>Control de existencias rápido:</b> Toca el botón de <b>"Activo / Agotado"</b> para pausar un platillo si se termina la carne o ingrediente en la noche. Edita el precio directamente en el recuadro y presiona Enter para guardar.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contenedor del Listado de Platillos -->
+      <div id="admin-dishes-grid" class="space-y-3">
+        <!-- Generado dinámicamente con JavaScript -->
+      </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- VISTA 2: BANNERS Y CARRUSEL DE PROMOCIONES            -->
+    <!-- ===================================================== -->
+    <section id="view-carousel" class="space-y-5 hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 glass p-4 rounded-2xl">
+        <div>
+          <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-images text-gold"></i> Banners y Promociones Activas
+          </h2>
+          <p class="text-xs text-text-muted mt-0.5">Las imágenes que ven los clientes al entrar en la parte superior del menú.</p>
+        </div>
+        <button type="button" id="btn-restore-slides" class="px-3 py-1.5 rounded-xl bg-bg-card hover:bg-bg-card-hover text-gold border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition-colors self-start sm:self-auto">
+          <i class="fa-solid fa-rotate-left"></i> Restaurar Banners Iniciales
+        </button>
+      </div>
+
+      <!-- Lista de Banners Actuales -->
+      <div id="admin-slides-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Renderizado dinámicamente -->
+      </div>
+
+      <!-- Formulario para Agregar Nuevo Banner -->
+      <div class="glass p-5 rounded-2xl space-y-4">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-circle-plus text-primary"></i> Agregar Nueva Diapositiva / Promoción
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-text-muted mb-1">Título de la Promoción *</label>
+            <input type="text" id="slide-new-title" placeholder="Ej. ¡Miércoles de 2x1 en Pastor!" class="in-fld">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-text-muted mb-1">Subtítulo o Descripción</label>
+            <input type="text" id="slide-new-subtitle" placeholder="Ej. Aplica en órdenes a domicilio de 7pm a 11pm" class="in-fld">
+          </div>
+        </div>
+
+        <div class="space-y-2 p-3 bg-bg-surface/50 rounded-xl border border-white/5">
+          <label class="block text-xs font-bold text-white">Imagen del Banner</label>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <input type="text" id="slide-new-url" placeholder="URL web o ruta local (ej. imagenes/promo1.jpg)" class="in-fld flex-1">
+            <label class="btn-p py-2 px-3 text-xs cursor-pointer shrink-0">
+              <i class="fa-solid fa-upload"></i> Subir Foto de mi PC/Celular
+              <input type="file" id="slide-new-file" accept="image/*" class="hidden">
+            </label>
+          </div>
+          <p id="slide-new-error" class="text-error text-xs hidden"></p>
+        </div>
+
+        <button type="button" id="btn-save-new-slide" class="btn-gold py-2.5 px-5 text-xs font-bold shadow-md">
+          <i class="fa-solid fa-check"></i> Guardar y Publicar Banner
+        </button>
+      </div>
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- VISTA 3: DATOS DEL LOCAL Y SEGURIDAD / PIN             -->
+    <!-- ===================================================== -->
+    <section id="view-settings" class="space-y-5 hidden">
+      <form id="form-admin-settings" class="space-y-5">
+        <!-- Bloque 1: Datos de la Taquería -->
+        <div class="glass p-5 rounded-2xl space-y-4">
+          <div class="flex items-center gap-2 border-b border-white/10 pb-3">
+            <div class="w-8 h-8 rounded-lg bg-gold/20 text-gold flex items-center justify-center font-bold text-sm"><i class="fa-solid fa-store"></i></div>
+            <div>
+              <h2 class="text-sm font-bold text-white">Información Comercial de la Taquería</h2>
+              <p class="text-xs text-text-muted">Aparece en el encabezado, ticket de compra y pie de página de los clientes.</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label for="set-name" class="block text-xs font-medium text-text-muted mb-1">Nombre Comercial *</label>
+              <input type="text" id="set-name" required placeholder="Taquería El Buen Taquito" class="in-fld font-semibold">
+            </div>
+            <div>
+              <label for="set-tagline" class="block text-xs font-medium text-text-muted mb-1">Eslogan o Lema</label>
+              <input type="text" id="set-tagline" placeholder="Sabor de la calle, directo a tu casa" class="in-fld">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label for="set-phone" class="block text-xs font-medium text-text-muted mb-1">Teléfono Fijo / Sucursal</label>
+              <input type="text" id="set-phone" placeholder="55 1234 5678" class="in-fld">
+            </div>
+            <div>
+              <label for="set-whatsapp" class="block text-xs font-medium text-text-muted mb-1">WhatsApp para Notificaciones de Pedidos</label>
+              <input type="text" id="set-whatsapp" placeholder="5215512345678 (con código país)" class="in-fld">
+              <p class="text-[10px] text-text-muted mt-1">Ingresa el número con clave internacional (ej. México: 521...).</p>
+            </div>
+          </div>
+
+          <div>
+            <label for="set-address" class="block text-xs font-medium text-text-muted mb-1">Dirección del Local</label>
+            <input type="text" id="set-address" placeholder="Av. Revolución 456, Col. Escandón, CDMX" class="in-fld">
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div>
+              <label for="set-hours-open" class="block text-xs font-medium text-text-muted mb-1">Hora Apertura</label>
+              <input type="time" id="set-hours-open" class="in-fld">
+            </div>
+            <div>
+              <label for="set-hours-close" class="block text-xs font-medium text-text-muted mb-1">Hora Cierre</label>
+              <input type="time" id="set-hours-close" class="in-fld">
+            </div>
+            <div>
+              <label for="set-delivery-fee" class="block text-xs font-medium text-text-muted mb-1">Costo de Envío ($ MXN)</label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gold font-bold text-xs">$</span>
+                <input type="number" step="1" min="0" id="set-delivery-fee" placeholder="25" class="in-fld pl-7 font-bold text-gold">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bloque 2: Seguridad y PIN de Acceso -->
+        <div class="glass p-5 rounded-2xl space-y-4">
+          <div class="flex items-center gap-2 border-b border-white/10 pb-3">
+            <div class="w-8 h-8 rounded-lg bg-red-500/20 text-error flex items-center justify-center font-bold text-sm"><i class="fa-solid fa-shield-halved"></i></div>
+            <div>
+              <h2 class="text-sm font-bold text-white">Seguridad y PIN de Administrador</h2>
+              <p class="text-xs text-text-muted">Protege el acceso a este panel para que los clientes o personal no autorizado no modifiquen precios.</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label for="set-pin" class="block text-xs font-medium text-text-muted mb-1">Nuevo PIN de Acceso (4 a 6 dígitos)</label>
+              <input type="password" id="set-pin" maxlength="6" placeholder="Ej. 1234" class="in-fld font-mono tracking-widest text-base">
+            </div>
+            <div>
+              <label for="set-pin-confirm" class="block text-xs font-medium text-text-muted mb-1">Confirmar Nuevo PIN</label>
+              <input type="password" id="set-pin-confirm" maxlength="6" placeholder="Repite el PIN" class="in-fld font-mono tracking-widest text-base">
+            </div>
+          </div>
+          <p id="pin-change-error" class="text-error text-xs hidden font-medium"></p>
+        </div>
+
+        <button type="submit" id="btn-save-all-settings" class="w-full btn-gold py-3 text-sm font-bold shadow-xl">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar Todos los Cambios
+        </button>
+      </form>
+    </section>
+
+    <!-- ===================================================== -->
+    <!-- VISTA 4: PREVIA DE COMANDERA / COCINA (PASO 2)         -->
+    <!-- ===================================================== -->
+    <section id="view-kitchen" class="space-y-5 hidden">
+      <div class="glass p-6 rounded-3xl border border-gold/30 bg-gradient-to-br from-bg-surface to-bg-card space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-gold/20 text-gold flex items-center justify-center text-2xl shadow-lg border border-gold/20">
+              <i class="fa-solid fa-bell-concierge"></i>
+            </div>
+            <div>
+              <h2 class="text-base sm:text-lg font-black text-white">Pantalla de Comandera / Cocina en Vivo</h2>
+              <p class="text-xs text-text-muted">Preparada para el <span class="text-gold font-bold">Paso 2</span> del proyecto.</p>
+            </div>
+          </div>
+          <button type="button" id="btn-test-bell" class="btn-gold py-2 px-4 text-xs font-bold shadow-md self-start sm:self-auto">
+            <i class="fa-solid fa-volume-high"></i> Probar Timbre de Cocina (Ding!)
+          </button>
+        </div>
+
+        <p class="text-xs text-text leading-relaxed">
+          En el <b>Paso 2</b> activaremos esta pantalla en tiempo real para que el taquero escuche una campana cada vez que un cliente pida tacos y vea las órdenes organizadas en 4 columnas:
+        </p>
+
+        <!-- Columnas de Demostración de Cocina -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 pt-2">
+          <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-blue-500/30 space-y-2">
+            <div class="flex items-center justify-between text-xs font-bold text-accent">
+              <span><i class="fa-solid fa-inbox mr-1"></i> 1. Nuevos Pedidos</span>
+              <span class="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center text-[10px]">1</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-bg-card/70 border border-white/5 text-[11px] space-y-1">
+              <div class="flex justify-between font-bold text-white">
+                <span>#ORD-101</span>
+                <span class="text-gold">Mesa 3</span>
+              </div>
+              <p class="text-text-muted">5x Tacos de Pastor con todo<br>2x Aguas Horchata</p>
+              <div class="pt-1 flex justify-end">
+                <span class="text-[9px] px-2 py-0.5 rounded-full bg-accent/20 text-accent font-semibold">Recibido</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-amber-500/30 space-y-2">
+            <div class="flex items-center justify-between text-xs font-bold text-gold">
+              <span><i class="fa-solid fa-fire mr-1"></i> 2. En el Comal</span>
+              <span class="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center text-[10px]">1</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-bg-card/70 border border-white/5 text-[11px] space-y-1">
+              <div class="flex justify-between font-bold text-white">
+                <span>#ORD-100</span>
+                <span class="text-accent">Para llevar</span>
+              </div>
+              <p class="text-text-muted">3x Gringas al Pastor<br>Sin cebolla</p>
+              <div class="pt-1 flex justify-end">
+                <span class="text-[9px] px-2 py-0.5 rounded-full bg-gold/20 text-gold font-semibold">Preparando</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-purple-500/30 space-y-2">
+            <div class="flex items-center justify-between text-xs font-bold text-purple-400">
+              <span><i class="fa-solid fa-motorcycle mr-1"></i> 3. Listos / En Camino</span>
+              <span class="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px]">0</span>
+            </div>
+            <div class="p-4 text-center text-text-muted/60 text-xs italic">
+              Sin pedidos listos por entregar
+            </div>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-green-500/30 space-y-2">
+            <div class="flex items-center justify-between text-xs font-bold text-success">
+              <span><i class="fa-solid fa-circle-check mr-1"></i> 4. Finalizados</span>
+              <span class="w-5 h-5 rounded-full bg-success/20 flex items-center justify-center text-[10px]">12</span>
+            </div>
+            <div class="p-4 text-center text-text-muted/60 text-xs italic">
+              Historial del turno de hoy
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-2 text-center">
+          <p class="text-xs text-text-muted">
+            ¡Todo listo en la arquitectura! Al terminar este paso 1, continuaremos directamente con el <b>Paso 2: Comandera en Vivo</b>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================================================== -->
+  <!-- MODAL: EDITOR COMPLETO DE PLATILLO (NUEVO O EDITAR)   -->
+  <!-- ===================================================== -->
+  <div id="dish-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-sm" role="dialog" aria-modal="true">
+    <div class="bg-bg-surface border border-white/10 w-full max-w-xl max-h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden text-xs">
+      <!-- Modal Header -->
+      <div class="px-5 py-3.5 border-b border-white/10 bg-bg-card/70 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-gold/20 text-gold flex items-center justify-center font-bold text-xs"><i class="fa-solid fa-utensils"></i></div>
+          <div>
+            <h2 id="dish-modal-heading" class="text-sm font-bold text-white">Agregar Nuevo Platillo</h2>
+            <p class="text-[10px] text-text-muted">Configura ingredientes, precio, foto y opciones</p>
+          </div>
+        </div>
+        <button type="button" id="btn-close-dish-modal" class="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 text-text-muted hover:text-white flex items-center justify-center transition-colors">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (Formulario) -->
+      <form id="dish-editor-form" class="flex-1 overflow-y-auto p-5 space-y-4">
+        <input type="hidden" id="dish-form-id" value="">
+
+        <!-- Nombre y Categoría -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="dish-name" class="block font-medium text-text-muted mb-1 text-[11px]">Nombre del Platillo *</label>
+            <input type="text" id="dish-name" required placeholder="Ej. Tacos de Barbacoa" class="in-fld">
+            <p id="err-dish-name" class="text-error text-[10px] hidden mt-1">El nombre es obligatorio.</p>
+          </div>
+          <div>
+            <label for="dish-category-select" class="block font-medium text-text-muted mb-1 text-[11px]">Categoría *</label>
+            <select id="dish-category-select" class="in-fld">
+              <option value="Tacos">Tacos</option>
+              <option value="Especialidades">Especialidades</option>
+              <option value="Tortas">Tortas</option>
+              <option value="Bebidas y Postres">Bebidas y Postres</option>
+              <option value="__new__">+ Nueva Categoría...</option>
+            </select>
+            <input type="text" id="dish-new-category-input" placeholder="Nombre de la nueva categoría..." class="in-fld mt-1.5 hidden">
+          </div>
+        </div>
+
+        <!-- Precio y Estado -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="dish-price" class="block font-medium text-text-muted mb-1 text-[11px]">Precio de Venta ($ MXN) *</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gold font-bold text-xs">$</span>
+              <input type="number" step="0.50" min="0" id="dish-price" required placeholder="35.00" class="in-fld pl-7 font-bold text-gold">
+            </div>
+            <p id="err-dish-price" class="text-error text-[10px] hidden mt-1">Ingresa un precio válido.</p>
+          </div>
+          <div>
+            <label class="block font-medium text-text-muted mb-1 text-[11px]">Disponibilidad en Menú</label>
+            <label class="flex items-center gap-2 p-2 bg-bg-card border border-white/10 rounded-xl cursor-pointer hover:bg-bg-card-hover transition-colors">
+              <input type="checkbox" id="dish-available" checked class="rounded bg-slate-900 text-success w-4 h-4">
+              <span class="font-semibold text-white text-[11px]">Platillo Activo (Disponible)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Descripción -->
+        <div>
+          <label for="dish-description" class="block font-medium text-text-muted mb-1 text-[11px]">Descripción / Ingredientes</label>
+          <textarea id="dish-description" rows="2" maxlength="300" placeholder="Ingredientes, preparación tradicional, notas del sabor..." class="in-fld resize-none"></textarea>
+        </div>
+
+        <!-- Fotografía del Platillo -->
+        <div class="p-3.5 rounded-2xl bg-bg-card/70 border border-white/10 space-y-2.5">
+          <label class="block font-bold text-white text-xs flex items-center gap-1.5">
+            <i class="fa-solid fa-camera text-gold"></i> Foto del Platillo
+          </label>
+          <div class="flex items-center gap-3">
+            <img id="dish-form-preview-img" src="" alt="Vista previa" class="w-16 h-16 rounded-xl object-cover bg-slate-900 border border-white/10 shrink-0">
+            <div class="flex-1 space-y-2 min-w-0">
+              <div class="flex items-center gap-2">
+                <label class="btn-p py-1 px-3 text-[11px] cursor-pointer shadow">
+                  <i class="fa-solid fa-upload"></i> Subir Foto de mi Local
+                  <input type="file" id="dish-form-file" accept="image/*" class="hidden">
+                </label>
+                <button type="button" id="btn-dish-form-reset-img" class="px-2.5 py-1 rounded-lg bg-bg-surface hover:bg-slate-700 text-text-muted hover:text-white border border-white/10 text-[10px]">
+                  Restablecer
+                </button>
+              </div>
+              <input type="text" id="dish-form-url" placeholder="O escribe enlace / ruta local (ej. imagenes/taco.jpg)" class="in-fld py-1 text-[10px] w-full">
+            </div>
+          </div>
+          <p class="text-[10px] text-text-muted">Acepta fotos de tu teléfono o cámara (se optimizan automáticamente).</p>
+        </div>
+
+        <!-- Opciones de Personalización para el Cliente -->
+        <div class="p-3.5 rounded-2xl bg-bg-card/70 border border-white/10 space-y-2">
+          <label class="block font-bold text-white text-xs flex items-center gap-1.5">
+            <i class="fa-solid fa-sliders text-accent"></i> Opciones de Personalización en la Tienda
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+            <label class="flex items-center gap-2 p-2 rounded-xl bg-bg-surface border border-white/5 cursor-pointer hover:bg-slate-800 transition-colors">
+              <input type="checkbox" id="opt-tortilla" class="rounded text-primary w-4 h-4">
+              <span class="text-white">Opción de Tortilla (Maíz / Harina)</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-xl bg-bg-surface border border-white/5 cursor-pointer hover:bg-slate-800 transition-colors">
+              <input type="checkbox" id="opt-salsas" class="rounded text-primary w-4 h-4">
+              <span class="text-white">Opción de Salsas (Verde / Roja)</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-xl bg-bg-surface border border-white/5 cursor-pointer hover:bg-slate-800 transition-colors">
+              <input type="checkbox" id="opt-toppings" class="rounded text-primary w-4 h-4">
+              <span class="text-white">Opción de Verdura (Cilantro / Cebolla)</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-xl bg-bg-surface border border-white/5 cursor-pointer hover:bg-slate-800 transition-colors">
+              <input type="checkbox" id="opt-cheese" class="rounded text-primary w-4 h-4">
+              <span class="text-white">Extra Queso (+ $15.00)</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-xl bg-bg-surface border border-white/5 cursor-pointer hover:bg-slate-800 transition-colors sm:col-span-2">
+              <input type="checkbox" id="opt-flavor" class="rounded text-primary w-4 h-4">
+              <span class="text-white">Opción de Sabor a elegir (refrescos / bebidas)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="pt-3 flex items-center justify-end gap-2 border-t border-white/10">
+          <button type="button" id="btn-cancel-dish-modal" class="px-3.5 py-2 rounded-xl bg-bg-card hover:bg-bg-card-hover text-text-muted hover:text-white font-semibold text-xs border border-white/10 transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" id="btn-save-dish-modal" class="btn-gold py-2 px-5 text-xs font-bold shadow-lg">
+            <i class="fa-solid fa-floppy-disk"></i> Guardar Platillo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================== -->
+  <!-- MODAL: DIÁLOGO DE CONFIRMACIÓN                        -->
+  <!-- ===================================================== -->
+  <div id="confirm-dialog" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm" role="dialog" aria-modal="true">
+    <div class="glass w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center space-y-4 border border-white/10">
+      <div id="dialog-icon" class="w-12 h-12 mx-auto rounded-2xl bg-red-500/20 text-error flex items-center justify-center text-xl">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div>
+        <h3 id="dialog-title" class="text-sm font-bold text-white">¿Estás seguro?</h3>
+        <p id="dialog-message" class="text-xs text-text-muted mt-1 leading-relaxed"></p>
+      </div>
+      <div class="flex items-center justify-center gap-2 pt-2">
+        <button type="button" id="dialog-cancel-btn" class="px-4 py-2 rounded-xl bg-bg-card hover:bg-bg-card-hover text-text-muted hover:text-white text-xs font-semibold border border-white/10 transition-colors">Cancelar</button>
+        <button type="button" id="dialog-confirm-btn" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-lg transition-colors">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================== -->
+  <!-- CONTENEDOR DE NOTIFICACIONES TOAST                     -->
+  <!-- ===================================================== -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-3"></div>
+
+  <!-- ===================================================== -->
+  <!-- LÓGICA JAVASCRIPT DEL PANEL DE ADMINISTRACIÓN         -->
+  <!-- ===================================================== -->
+  <script>
+    /* 1. CONFIGURACIÓN Y VALORES POR DEFECTO */
+    const DEFAULT_CONFIG = {
+      name: 'Taquería El Buen Taquito',
+      tagline: 'Sabor de la calle, directo a tu casa',
+      phone: '55 1234 5678',
+      address: 'Av. Revolución 456, Col. Escandón, CDMX',
+      hours: { open: '13:00', close: '23:00', days: [0, 1, 2, 3, 4, 5, 6] },
+      deliveryFee: 2500, // En centavos ($25.00)
+      maxQtyPerLine: 20,
+      adminPin: '1234',
+      whatsappNumber: '5215512345678',
+      trackerStageSeconds: [0, 10, 20, 30]
+    };
+
+    let CONFIG = { ...DEFAULT_CONFIG };
+
+    const DEFAULT_SLIDES = [
+      { id: 's1', title: '¡Tacos al Pastor Tradicionales!', subtitle: 'Con piña miel, cebolla, cilantro y salsas de la casa.', image: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?auto=format&fit=crop&w=800&q=70' },
+      { id: 's2', title: 'Especialidades al Carbón', subtitle: 'Gringas doraditas con queso fundido y carne al pastor.', image: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=800&q=70' },
+      { id: 's3', title: 'Aguas Frescas Artesanales', subtitle: 'Horchata y Jamaica 100% naturales para refrescarte.', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=70' }
+    ];
+
+    const DEFAULT_CATALOG = [
+      { id: 'taco-pastor', name: 'Tacos al Pastor', description: 'Carne de cerdo marinada con achiote y especias, piña, cilantro y cebolla. (por pieza)', price: 2800, category: 'Tacos', image: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?auto=format&fit=crop&w=800&q=70', available: true, customizer: { tortilla: true, salsas: true, toppings: true, extraCheese: true } },
+      { id: 'taco-bistec', name: 'Tacos de Bistec', description: 'Carne de res asada con toque de la casa. (por pieza)', price: 3200, category: 'Tacos', image: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=800&q=70', available: true, customizer: { tortilla: true, salsas: true, toppings: true, extraCheese: true } },
+      { id: 'taco-suadero', name: 'Tacos de Suadero', description: 'Confitado tradicional en cazuela, jugoso y suave. (por pieza)', price: 3000, category: 'Tacos', image: 'https://images.unsplash.com/photo-1615870216519-2f9fa575fa5c?auto=format&fit=crop&w=800&q=70', available: true, customizer: { tortilla: true, salsas: true, toppings: true, extraCheese: true } },
+      { id: 'gringa-pastor', name: 'Gringas al Pastor', description: 'Tortilla de harina grande, queso derretido, carne al pastor y piña.', price: 6500, category: 'Especialidades', image: 'https://images.unsplash.com/photo-1624300629298-e9de39c13be5?auto=format&fit=crop&w=800&q=70', available: true, customizer: { tortillaFixed: 'Tortilla de harina', salsas: true, toppings: true, extraCheese: true } },
+      { id: 'torta-especial', name: 'Tortas Especiales', description: 'Telera dorada con mantequilla, aguacate, frijoles y carne a elegir.', price: 7500, category: 'Tortas', image: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&fit=crop&w=800&q=70', available: true, customizer: { meat: true, salsas: true, toppings: true, extraCheese: true } },
+      { id: 'agua-horchata', name: 'Agua de Horchata', description: 'Agua fresca artesanal de arroz con canela.', price: 3500, category: 'Bebidas y Postres', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=70', available: true, customizer: {} },
+      { id: 'agua-jamaica', name: 'Agua de Jamaica', description: 'Agua fresca artesanal de flor de jamaica natural.', price: 3500, category: 'Bebidas y Postres', image: 'https://images.unsplash.com/photo-1546173159-315724a31696?auto=format&fit=crop&w=800&q=70', available: true, customizer: {} },
+      { id: 'refresco', name: 'Refresco Mexicano', description: 'Refresco embotellado de 355 ml, a elegir sabor.', price: 3000, category: 'Bebidas y Postres', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=70', available: true, customizer: { flavor: true } },
+      { id: 'flan', name: 'Flan Napolitano', description: 'Postre casero tradicional con caramelo dorado.', price: 4500, category: 'Bebidas y Postres', image: 'https://images.unsplash.com/photo-1528975604071-b4dc52a2d18c?auto=format&fit=crop&w=800&q=70', available: true, customizer: {} }
+    ];
+
+    /* 2. ESTADO GLOBAL */
+    const STATE = {
+      menu: [...DEFAULT_CATALOG],
+      slides: [...DEFAULT_SLIDES],
+      searchQuery: '',
+      filterCategory: 'all',
+      dialogCallback: null,
+      currentEditingImage: ''
+    };
+
+    /* 3. ALMACENAMIENTO PERSISTENTE */
+    const STORAGE_KEYS = {
+      CART: 'taqueria:v1:cart',
+      PHOTOS: 'taqueria:v1:photos',
+      MENU: 'taqueria:v1:menu',
+      CONFIG: 'taqueria:v1:config',
+      DELIVERY: 'taqueria:v1:delivery',
+      ORDER: 'taqueria:v1:order'
+    };
+
+    const Storage = {
+      get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e) { return null; } },
+      set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e) { if(e.name === 'QuotaExceededError') showToast('Memoria llena. Sube fotos de menor tamaño.', 'error'); return false; } },
+      remove(k) { try { localStorage.removeItem(k); } catch(e) {} }
+    };
+
+    /* 4. UTILIDADES */
+    const $ = (id) => document.getElementById(id);
+    const $$ = (sel) => document.querySelectorAll(sel);
+    const mxn = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+    const formatMoney = (c) => mxn.format((c || 0) / 100);
+    const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[m]));
+    const SVG_TACO = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='200' height='200' fill='%231e293b'/><circle cx='100' cy='100' r='50' fill='%23fbbf24' opacity='0.2'/><path d='M60 120 C60 80, 140 80, 140 120 Z' fill='%23f59e0b'/><circle cx='85' cy='105' r='5' fill='%23ef4444'/><circle cx='115' cy='105' r='5' fill='%2322c55e'/><text x='100' y='155' font-family='sans-serif' font-size='12' fill='%2394a3b8' text-anchor='middle'>El Buen Taquito</text></svg>";
+
+    function showToast(msg, type = 'info') {
+      const cont = $('toast-container');
+      const t = document.createElement('div');
+      const icons = {
+        success: 'fa-circle-check text-success',
+        error: 'fa-circle-exclamation text-error',
+        info: 'fa-circle-info text-accent'
+      };
+      t.className = 'pointer-events-auto flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-bg-surface border border-white/10 text-white text-xs shadow-2xl transition-all duration-300 transform translate-y-3 opacity-0';
+      t.innerHTML = `<i class="fa-solid ${icons[type] || icons.info} text-sm"></i><span class="font-medium">${escapeHtml(msg)}</span>`;
+      cont.appendChild(t);
+      requestAnimationFrame(() => t.classList.remove('translate-y-3', 'opacity-0'));
+      setTimeout(() => {
+        t.classList.add('opacity-0', 'translate-y-3');
+        setTimeout(() => t.remove(), 300);
+      }, 3500);
+    }
+
+    function openDialog({ title, message, confirmText = 'Confirmar', isDanger = true, onConfirm }) {
+      $('dialog-title').textContent = title;
+      $('dialog-message').textContent = message;
+      const btn = $('dialog-confirm-btn');
+      btn.textContent = confirmText;
+      btn.className = isDanger 
+        ? 'px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-lg transition-colors'
+        : 'btn-p px-4 py-2 text-xs font-bold shadow-lg';
+      STATE.dialogCallback = onConfirm;
+      $('confirm-dialog').classList.remove('hidden');
+    }
+
+    function closeDialog() {
+      $('confirm-dialog').classList.add('hidden');
+      STATE.dialogCallback = null;
+    }
+
+    /* 5. SONIDO DE CAMPANA DE COCINA (WEB AUDIO API) */
+    function playKitchenBell() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        // Tono brillante tipo campana de restaurante (A5 a E5)
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(587.33, ctx.currentTime + 0.15);
+
+        gain.gain.setValueAtTime(0.7, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start();
+        osc.stop(ctx.currentTime + 1.2);
+        showToast('🔔 ¡Timbre de cocina reproducido con éxito!', 'success');
+      } catch(e) {
+        showToast('No se pudo reproducir audio', 'error');
+      }
+    }
+
+    /* 6. COMPRESIÓN DE IMÁGENES (OPTIMIZACIÓN PARA LOCALSTORAGE) */
+    function downscaleImage(file) {
+      return new Promise((resolve, reject) => {
+        if (!file || !file.type.startsWith('image/')) return reject(new Error('Selecciona un archivo de imagen válido (.jpg, .png)'));
+        if (file.size > 12 * 1024 * 1024) return reject(new Error('La imagen supera 12 MB'));
+        const r = new FileReader();
+        r.onload = e => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width, h = img.height;
+            const maxDim = 800;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+              else { w = Math.round((w * maxDim) / h); h = maxDim; }
+            }
+            const cvs = document.createElement('canvas'); cvs.width = w; cvs.height = h;
+            const ctx = cvs.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(cvs.toDataURL('image/jpeg', 0.78));
+          };
+          img.onerror = () => reject(new Error('Error al procesar la imagen'));
+          img.src = e.target.result;
+        };
+        r.onerror = () => reject(new Error('Error al leer el archivo'));
+        r.readAsDataURL(file);
+      });
+    }
+
+    function verifyUrl(u) {
+      return new Promise((resolve) => {
+        if (!u) return resolve(SVG_TACO);
+        const t = u.trim();
+        resolve(t);
+      });
+    }
+
+    /* 7. CARGA Y GUARDADO DE DATOS */
+    function loadData() {
+      // Menú
+      const savedMenu = Storage.get(STORAGE_KEYS.MENU);
+      if (Array.isArray(savedMenu) && savedMenu.length > 0) {
+        STATE.menu = savedMenu;
+      } else {
+        STATE.menu = DEFAULT_CATALOG.map(d => ({ ...d }));
+        const s = Storage.get(STORAGE_KEYS.PHOTOS);
+        if (s?.overrides) {
+          STATE.menu = STATE.menu.map(it => s.overrides[it.id] ? { ...it, image: s.overrides[it.id] } : it);
+        }
+      }
+
+      // Banners
+      const s = Storage.get(STORAGE_KEYS.PHOTOS);
+      if (s && Array.isArray(s.slides) && s.slides.length) {
+        STATE.slides = s.slides;
+      } else {
+        STATE.slides = [...DEFAULT_SLIDES];
+      }
+
+      // Configuración
+      const cfg = Storage.get(STORAGE_KEYS.CONFIG);
+      if (cfg && typeof cfg === 'object') {
+        CONFIG = { ...DEFAULT_CONFIG, ...cfg, hours: { ...DEFAULT_CONFIG.hours, ...(cfg.hours || {}) } };
+      } else {
+        CONFIG = { ...DEFAULT_CONFIG };
+      }
+
+      // Actualizar Título
+      $('admin-header-title').textContent = CONFIG.name;
+    }
+
+    function saveMenu() {
+      Storage.set(STORAGE_KEYS.MENU, STATE.menu);
+      savePhotos();
+    }
+
+    function savePhotos() {
+      const d = { slides: STATE.slides, overrides: {} };
+      STATE.menu.forEach(it => {
+        const def = DEFAULT_CATALOG.find(x => x.id === it.id);
+        if (def && it.image !== def.image) d.overrides[it.id] = it.image;
+      });
+      Storage.set(STORAGE_KEYS.PHOTOS, d);
+    }
+
+    function saveConfig() {
+      Storage.set(STORAGE_KEYS.CONFIG, CONFIG);
+    }
+
+    /* 8. SEGURIDAD Y CONTROL DE PIN */
+    function checkPinScreen() {
+      const unlocked = sessionStorage.getItem('taqueria:admin_unlocked') === 'true';
+      const screen = $('pin-screen');
+      if (unlocked) {
+        screen.classList.add('hidden');
+        renderAllViews();
+      } else {
+        screen.classList.remove('hidden');
+        $('pin-input-field').value = '';
+        $('pin-error-msg').classList.add('hidden');
+        updatePinDots('');
+        setTimeout(() => $('pin-input-field').focus(), 100);
+      }
+    }
+
+    function updatePinDots(val) {
+      for (let i = 0; i < 4; i++) {
+        const dot = $(`dot-${i}`);
+        if (i < val.length) {
+          dot.classList.remove('border-white/30');
+          dot.classList.add('bg-gold', 'border-gold', 'scale-110');
+        } else {
+          dot.classList.remove('bg-gold', 'border-gold', 'scale-110');
+          dot.classList.add('border-white/30');
+        }
+      }
+    }
+
+    function verifyPin(enteredPin) {
+      const cleanPin = (enteredPin || '').trim();
+      const currentPin = CONFIG.adminPin || '1234';
+
+      if (cleanPin === currentPin) {
+        sessionStorage.setItem('taqueria:admin_unlocked', 'true');
+        $('pin-screen').classList.add('hidden');
+        showToast('¡Panel de Administración Desbloqueado!', 'success');
+        renderAllViews();
+      } else {
+        $('pin-error-msg').classList.remove('hidden');
+        $('pin-input-field').value = '';
+        updatePinDots('');
+        // Efecto de sacudida
+        $('pin-screen').querySelector('.glass').classList.add('animate-bounce');
+        setTimeout(() => $('pin-screen').querySelector('.glass').classList.remove('animate-bounce'), 400);
+      }
+    }
+
+    function lockPanel() {
+      sessionStorage.removeItem('taqueria:admin_unlocked');
+      checkPinScreen();
+      showToast('Panel bloqueado correctamente', 'info');
+    }
+
+    /* 9. RENDERIZADO DEL CATÁLOGO Y CONTROL DE EXISTENCIAS */
+    const BASE_CATEGORIES = ['Tacos', 'Especialidades', 'Tortas', 'Bebidas y Postres'];
+
+    function getAllCategories() {
+      const list = [...BASE_CATEGORIES];
+      STATE.menu.forEach(it => {
+        if (it.category && !list.includes(it.category)) list.push(it.category);
+      });
+      return list;
+    }
+
+    function updateKpis() {
+      const total = STATE.menu.length;
+      const active = STATE.menu.filter(m => m.available !== false).length;
+      const soldOut = total - active;
+      const cats = getAllCategories().length;
+
+      $('kpi-total-dishes').textContent = total;
+      $('kpi-active-dishes').textContent = active;
+      $('kpi-soldout-dishes').textContent = soldOut;
+      $('kpi-categories').textContent = cats;
+    }
+
+    function renderCategoryFilter() {
+      const select = $('admin-category-filter');
+      const cats = getAllCategories();
+      const curr = STATE.filterCategory || 'all';
+      select.innerHTML = '<option value="all">Todas las categorías</option>' +
+        cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+      select.value = curr;
+    }
+
+    function renderDishes() {
+      updateKpis();
+      renderCategoryFilter();
+
+      const container = $('admin-dishes-grid');
+      const q = (STATE.searchQuery || '').toLowerCase().trim();
+      const cat = STATE.filterCategory || 'all';
+
+      const filtered = STATE.menu.filter(it => {
+        const matchesQ = !q || it.name.toLowerCase().includes(q) || (it.description && it.description.toLowerCase().includes(q));
+        const matchesCat = cat === 'all' || it.category === cat;
+        return matchesQ && matchesCat;
+      });
+
+      if (!filtered.length) {
+        container.innerHTML = `
+          <div class="glass p-12 rounded-3xl text-center space-y-2 text-text-muted">
+            <i class="fa-solid fa-utensils text-3xl text-gold/50"></i>
+            <h4 class="text-sm font-bold text-white">No se encontraron platillos</h4>
+            <p class="text-xs">Prueba cambiando el filtro de búsqueda o agrega un nuevo platillo.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(it => {
+        const isAvail = it.available !== false;
+        return `
+          <div class="glass p-3.5 sm:p-4 rounded-2xl transition-all hover:border-white/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 ${!isAvail ? 'opacity-70 bg-bg-surface/40' : ''}">
+            <!-- Columna Izquierda: Foto, Nombre, Categoría y Descripción -->
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+              <!-- Foto con disparador para cambiar foto rápida -->
+              <div class="relative group shrink-0">
+                <img src="${escapeHtml(it.image)}" alt="" onerror="this.onerror=null;this.src='${SVG_TACO}'" class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover bg-slate-900 border border-white/10" id="dish-img-${it.id}">
+                <label class="absolute inset-0 bg-slate-950/80 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-opacity text-white text-[9px] font-bold" title="Cambiar foto de este platillo">
+                  <i class="fa-solid fa-camera text-xs mb-0.5 text-gold"></i>
+                  <span>Cambiar</span>
+                  <input type="file" accept="image/*" class="quick-dish-file hidden" data-id="${it.id}">
+                </label>
+              </div>
+
+              <!-- Textos -->
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="text-xs sm:text-sm font-bold text-white truncate">${escapeHtml(it.name)}</h3>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-text-muted font-medium">${escapeHtml(it.category)}</span>
+                  ${!isAvail ? '<span class="text-[9px] px-2 py-0.2 rounded-full bg-red-500/20 text-error font-extrabold border border-red-500/30 uppercase tracking-wider">Agotado</span>' : ''}
+                </div>
+                <p class="text-[11px] text-text-muted line-clamp-1 sm:line-clamp-2 mt-0.5">${escapeHtml(it.description || 'Sin descripción')}</p>
+              </div>
+            </div>
+
+            <!-- Columna Derecha: Control de Existencias, Precio Rápido y Acciones -->
+            <div class="flex items-center gap-2.5 shrink-0 justify-between sm:justify-end border-t sm:border-t-0 border-white/5 pt-2.5 sm:pt-0">
+              <!-- Edición de Precio Rápida -->
+              <div class="flex items-center gap-1 bg-bg-surface px-2.5 py-1 rounded-xl border border-white/10 shadow-inner" title="Editar precio directamente ($ MXN)">
+                <span class="text-xs text-gold font-extrabold">$</span>
+                <input type="number" step="0.50" min="0" value="${(it.price / 100).toFixed(2)}" class="quick-price-input in-fld w-16 sm:w-20 py-0.5 px-1 text-center font-extrabold text-gold text-xs bg-transparent border-none" data-id="${it.id}">
+              </div>
+
+              <!-- Switch Rápido de Disponibilidad (Activo / Agotado) -->
+              <button type="button" class="btn-toggle-availability px-3 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 ${isAvail ? 'bg-success/15 border-success/30 text-success hover:bg-success/25' : 'bg-red-500/15 border-red-500/30 text-error hover:bg-red-500/25'}" data-id="${it.id}" title="Presiona para activar o marcar como agotado">
+                ${isAvail ? '<i class="fa-solid fa-check"></i> Activo' : '<i class="fa-solid fa-ban"></i> Agotado'}
+              </button>
+
+              <!-- Botones de Acción (Editar y Eliminar) -->
+              <div class="flex items-center gap-1.5">
+                <button type="button" class="btn-edit-dish px-3 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow transition-all flex items-center gap-1" data-id="${it.id}" title="Editar platillo">
+                  <i class="fa-solid fa-pen-to-square"></i> <span class="hidden md:inline">Editar</span>
+                </button>
+                <button type="button" class="btn-delete-dish w-8 h-8 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-error border border-red-500/20 flex items-center justify-center transition-all" data-id="${it.id}" title="Eliminar platillo">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /* 10. GESTIÓN DE BANNERS / CARRUSEL */
+    function renderSlides() {
+      const container = $('admin-slides-container');
+      if (!STATE.slides.length) {
+        container.innerHTML = '<p class="text-xs text-text-muted italic">No hay diapositivas activas.</p>';
+        return;
+      }
+
+      container.innerHTML = STATE.slides.map((s, idx) => `
+        <div class="glass rounded-2xl overflow-hidden border border-white/10 group flex flex-col justify-between">
+          <div class="relative aspect-video bg-slate-900">
+            <img src="${escapeHtml(s.image)}" alt="" onerror="this.onerror=null;this.src='${SVG_TACO}'" class="w-full h-full object-cover">
+            <span class="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-slate-950/70 text-white font-mono text-[10px]">#${idx + 1}</span>
+            <button type="button" class="btn-delete-slide absolute top-2 right-2 w-7 h-7 rounded-lg bg-red-600/80 hover:bg-red-600 text-white flex items-center justify-center text-xs shadow transition-all" data-index="${idx}" title="Eliminar este banner">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+          <div class="p-3.5 space-y-1">
+            <h4 class="text-xs font-bold text-white truncate">${escapeHtml(s.title)}</h4>
+            <p class="text-[11px] text-text-muted line-clamp-2">${escapeHtml(s.subtitle || 'Sin descripción')}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    /* 11. GESTIÓN DE CONFIGURACIÓN DEL LOCAL */
+    function populateSettingsForm() {
+      $('set-name').value = CONFIG.name || '';
+      $('set-tagline').value = CONFIG.tagline || '';
+      $('set-phone').value = CONFIG.phone || '';
+      $('set-whatsapp').value = CONFIG.whatsappNumber || '';
+      $('set-address').value = CONFIG.address || '';
+      $('set-hours-open').value = CONFIG.hours?.open || '13:00';
+      $('set-hours-close').value = CONFIG.hours?.close || '23:00';
+      $('set-delivery-fee').value = (CONFIG.deliveryFee || 2500) / 100;
+      $('set-pin').value = '';
+      $('set-pin-confirm').value = '';
+      $('pin-change-error').classList.add('hidden');
+    }
+
+    function saveSettingsFromForm(e) {
+      e.preventDefault();
+      const newName = $('set-name').value.trim();
+      const newTagline = $('set-tagline').value.trim();
+      const newPhone = $('set-phone').value.trim();
+      const newWa = $('set-whatsapp').value.replace(/\D/g, '');
+      const newAddress = $('set-address').value.trim();
+      const openH = $('set-hours-open').value;
+      const closeH = $('set-hours-close').value;
+      const feeVal = parseFloat($('set-delivery-fee').value) || 25;
+
+      const newPin = $('set-pin').value.trim();
+      const confirmPin = $('set-pin-confirm').value.trim();
+
+      if (newPin) {
+        if (newPin.length < 4 || newPin.length > 6) {
+          $('pin-change-error').textContent = 'El PIN debe tener entre 4 y 6 dígitos.';
+          $('pin-change-error').classList.remove('hidden');
+          return;
+        }
+        if (newPin !== confirmPin) {
+          $('pin-change-error').textContent = 'Los dos campos de PIN no coinciden.';
+          $('pin-change-error').classList.remove('hidden');
+          return;
+        }
+        CONFIG.adminPin = newPin;
+      }
+
+      CONFIG.name = newName || CONFIG.name;
+      CONFIG.tagline = newTagline || CONFIG.tagline;
+      CONFIG.phone = newPhone || CONFIG.phone;
+      CONFIG.whatsappNumber = newWa || CONFIG.whatsappNumber;
+      CONFIG.address = newAddress || CONFIG.address;
+      CONFIG.hours.open = openH || CONFIG.hours.open;
+      CONFIG.hours.close = closeH || CONFIG.hours.close;
+      CONFIG.deliveryFee = Math.round(feeVal * 100);
+
+      saveConfig();
+      $('admin-header-title').textContent = CONFIG.name;
+      showToast('Configuración del local y datos guardados', 'success');
+      $('pin-change-error').classList.add('hidden');
+      $('set-pin').value = '';
+      $('set-pin-confirm').value = '';
+    }
+
+    /* 12. MODAL EDITOR DE PLATILLO (AGREGAR / MODIFICAR) */
+    function openDishModal(id = null) {
+      const modal = $('dish-modal');
+      const heading = $('dish-modal-heading');
+      const catSelect = $('dish-category-select');
+      const newCatInput = $('dish-new-category-input');
+      newCatInput.classList.add('hidden');
+      newCatInput.value = '';
+
+      // Poblar opciones de categorías
+      const cats = getAllCategories();
+      catSelect.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('') +
+        '<option value="__new__">+ Otra Categoría...</option>';
+
+      if (id) {
+        const dish = STATE.menu.find(m => m.id === id);
+        if (!dish) return;
+        heading.innerHTML = `<i class="fa-solid fa-pen text-gold mr-1"></i> Editar: ${escapeHtml(dish.name)}`;
+        $('dish-form-id').value = dish.id;
+        $('dish-name').value = dish.name;
+        catSelect.value = dish.category;
+        $('dish-price').value = (dish.price / 100).toFixed(2);
+        $('dish-available').checked = dish.available !== false;
+        $('dish-description').value = dish.description || '';
+
+        STATE.currentEditingImage = dish.image || SVG_TACO;
+        $('dish-form-preview-img').src = STATE.currentEditingImage;
+        $('dish-form-url').value = dish.image.startsWith('data:') ? '' : dish.image;
+
+        const cust = dish.customizer || {};
+        $('opt-tortilla').checked = !!cust.tortilla;
+        $('opt-salsas').checked = !!cust.salsas;
+        $('opt-toppings').checked = !!cust.toppings;
+        $('opt-cheese').checked = !!cust.extraCheese;
+        $('opt-flavor').checked = !!cust.flavor;
+      } else {
+        heading.innerHTML = '<i class="fa-solid fa-circle-plus text-gold mr-1"></i> Agregar Nuevo Platillo';
+        $('dish-form-id').value = '';
+        $('dish-name').value = '';
+        catSelect.value = 'Tacos';
+        $('dish-price').value = '35.00';
+        $('dish-available').checked = true;
+        $('dish-description').value = '';
+
+        STATE.currentEditingImage = SVG_TACO;
+        $('dish-form-preview-img').src = SVG_TACO;
+        $('dish-form-url').value = '';
+
+        $('opt-tortilla').checked = true;
+        $('opt-salsas').checked = true;
+        $('opt-toppings').checked = true;
+        $('opt-cheese').checked = true;
+        $('opt-flavor').checked = false;
+      }
+
+      $('err-dish-name').classList.add('hidden');
+      $('err-dish-price').classList.add('hidden');
+      modal.classList.remove('hidden');
+    }
+
+    function closeDishModal() {
+      $('dish-modal').classList.add('hidden');
+    }
+
+    /* 13. RENDERIZAR TODAS LAS VISTAS */
+    function renderAllViews() {
+      renderDishes();
+      renderSlides();
+      populateSettingsForm();
+    }
+
+    /* 14. INICIALIZACIÓN DE EVENTOS */
+    function initEvents() {
+      // Teclado Numérico del PIN
+      $$('.numpad-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const val = btn.getAttribute('data-val');
+          const input = $('pin-input-field');
+          if (input.value.length < 6) {
+            input.value += val;
+            updatePinDots(input.value);
+            if (input.value.length === 4) {
+              setTimeout(() => verifyPin(input.value), 150);
+            }
+          }
+        });
+      });
+
+      $('numpad-clear').addEventListener('click', () => {
+        $('pin-input-field').value = '';
+        updatePinDots('');
+        $('pin-error-msg').classList.add('hidden');
+      });
+
+      $('numpad-backspace').addEventListener('click', () => {
+        const input = $('pin-input-field');
+        input.value = input.value.slice(0, -1);
+        updatePinDots(input.value);
+      });
+
+      $('pin-input-field').addEventListener('input', e => {
+        updatePinDots(e.target.value);
+        if (e.target.value.length >= 4) {
+          setTimeout(() => verifyPin(e.target.value), 200);
+        }
+      });
+
+      $('btn-unlock-panel').addEventListener('click', () => {
+        verifyPin($('pin-input-field').value);
+      });
+
+      $('btn-lock-panel').addEventListener('click', lockPanel);
+
+      // Pestañas Principales de Navegación
+      const tabs = [
+        { id: 'nav-tab-catalog', view: 'view-catalog' },
+        { id: 'nav-tab-carousel', view: 'view-carousel' },
+        { id: 'nav-tab-settings', view: 'view-settings' },
+        { id: 'nav-tab-kitchen', view: 'view-kitchen' }
+      ];
+
+      tabs.forEach(t => {
+        $(t.id).addEventListener('click', () => {
+          tabs.forEach(other => {
+            const btn = $(other.id);
+            const view = $(other.view);
+            if (other.id === t.id) {
+              btn.className = 'admin-tab-btn px-3.5 py-2 rounded-xl bg-primary text-white flex items-center gap-2 shrink-0 transition-all shadow-md';
+              view.classList.remove('hidden');
+            } else {
+              btn.className = 'admin-tab-btn px-3.5 py-2 rounded-xl text-text-muted hover:text-white hover:bg-white/5 flex items-center gap-2 shrink-0 transition-all';
+              view.classList.add('hidden');
+            }
+          });
+        });
+      });
+
+      // Filtros de Catálogo
+      let searchTimeout = null;
+      $('admin-search-input').addEventListener('input', e => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          STATE.searchQuery = e.target.value;
+          renderDishes();
+        }, 150);
+      });
+
+      $('admin-category-filter').addEventListener('change', e => {
+        STATE.filterCategory = e.target.value;
+        renderDishes();
+      });
+
+      // Nuevo Platillo Modal
+      $('btn-open-new-dish').addEventListener('click', () => openDishModal(null));
+      $('btn-close-dish-modal').addEventListener('click', closeDishModal);
+      $('btn-cancel-dish-modal').addEventListener('click', closeDishModal);
+
+      // Cambio rápido de categoría en el modal
+      $('dish-category-select').addEventListener('change', e => {
+        const isNew = e.target.value === '__new__';
+        $('dish-new-category-input').classList.toggle('hidden', !isNew);
+        if (isNew) $('dish-new-category-input').focus();
+      });
+
+      // Subida de imagen en el modal
+      $('dish-form-file').addEventListener('change', async e => {
+        if (e.target.files?.[0]) {
+          try {
+            const dataUrl = await downscaleImage(e.target.files[0]);
+            STATE.currentEditingImage = dataUrl;
+            $('dish-form-preview-img').src = dataUrl;
+            $('dish-form-url').value = '';
+            showToast('Foto cargada y optimizada', 'success');
+          } catch(err) {
+            showToast(err.message, 'error');
+          }
+        }
+      });
+
+      $('dish-form-url').addEventListener('input', async e => {
+        const val = e.target.value.trim();
+        if (val) {
+          const verified = await verifyUrl(val);
+          STATE.currentEditingImage = verified;
+          $('dish-form-preview-img').src = verified;
+        }
+      });
+
+      $('btn-dish-form-reset-img').addEventListener('click', () => {
+        STATE.currentEditingImage = SVG_TACO;
+        $('dish-form-preview-img').src = SVG_TACO;
+        $('dish-form-url').value = '';
+        $('dish-form-file').value = '';
+      });
+
+      // Guardar Platillo (Form Submit)
+      $('dish-editor-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const id = $('dish-form-id').value;
+        const name = $('dish-name').value.trim();
+        const catSelect = $('dish-category-select').value;
+        const newCat = $('dish-new-category-input').value.trim();
+        const category = catSelect === '__new__' ? (newCat || 'Varios') : catSelect;
+        const priceVal = parseFloat($('dish-price').value);
+        const desc = $('dish-description').value.trim();
+        const available = $('dish-available').checked;
+
+        if (!name) { $('err-dish-name').classList.remove('hidden'); return; }
+        if (isNaN(priceVal) || priceVal < 0) { $('err-dish-price').classList.remove('hidden'); return; }
+
+        const customizer = {};
+        if ($('opt-tortilla').checked) customizer.tortilla = true;
+        if ($('opt-salsas').checked) customizer.salsas = true;
+        if ($('opt-toppings').checked) customizer.toppings = true;
+        if ($('opt-cheese').checked) customizer.extraCheese = true;
+        if ($('opt-flavor').checked) customizer.flavor = true;
+
+        let finalImage = STATE.currentEditingImage || SVG_TACO;
+        const urlTyped = $('dish-form-url').value.trim();
+        if (urlTyped) finalImage = await verifyUrl(urlTyped);
+
+        if (id) {
+          const it = STATE.menu.find(m => m.id === id);
+          if (it) {
+            it.name = name;
+            it.category = category;
+            it.price = Math.round(priceVal * 100);
+            it.description = desc;
+            it.available = available;
+            it.image = finalImage;
+            it.customizer = customizer;
+            showToast(`Platillo "${it.name}" actualizado`, 'success');
+          }
+        } else {
+          const newId = 'dish-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6);
+          STATE.menu.push({
+            id: newId,
+            name,
+            category,
+            price: Math.round(priceVal * 100),
+            description: desc,
+            available,
+            image: finalImage,
+            customizer
+          });
+          showToast(`¡Platillo "${name}" creado exitosamente!`, 'success');
+        }
+
+        saveMenu();
+        renderDishes();
+        closeDishModal();
+      });
+
+      // EVENTOS DENTRO DE LA LISTA DE PLATILLOS:
+      const grid = $('admin-dishes-grid');
+
+      // 1. Toggle Disponibilidad (Activo / Agotado) con 1 clic
+      grid.addEventListener('click', e => {
+        const btn = e.target.closest('.btn-toggle-availability');
+        if (!btn) return;
+        const id = btn.getAttribute('data-id');
+        const it = STATE.menu.find(m => m.id === id);
+        if (it) {
+          it.available = !(it.available !== false);
+          saveMenu();
+          renderDishes();
+          showToast(`${it.name}: ${it.available ? '🟢 Activado' : '🔴 Marcado como Agotado'}`, it.available ? 'success' : 'info');
+        }
+      });
+
+      // 2. Cambio rápido de precio inline
+      grid.addEventListener('change', e => {
+        if (e.target.classList.contains('quick-price-input')) {
+          const id = e.target.getAttribute('data-id');
+          const val = parseFloat(e.target.value);
+          const it = STATE.menu.find(m => m.id === id);
+          if (it && !isNaN(val) && val >= 0) {
+            it.price = Math.round(val * 100);
+            saveMenu();
+            showToast(`Precio de "${it.name}" actualizado a ${formatMoney(it.price)}`, 'success');
+          }
+        }
+      });
+      grid.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && e.target.classList.contains('quick-price-input')) {
+          e.target.blur();
+        }
+      });
+
+      // 3. Subir foto rápida desde la tarjeta
+      grid.addEventListener('change', async e => {
+        const fileIn = e.target.closest('.quick-dish-file');
+        if (fileIn?.files?.[0]) {
+          const id = fileIn.getAttribute('data-id');
+          try {
+            const dataUrl = await downscaleImage(fileIn.files[0]);
+            const it = STATE.menu.find(m => m.id === id);
+            if (it) {
+              it.image = dataUrl;
+              saveMenu();
+              $(`dish-img-${id}`).src = dataUrl;
+              showToast(`Foto actualizada para: ${it.name}`, 'success');
+            }
+          } catch(err) {
+            showToast(err.message, 'error');
+          }
+        }
+      });
+
+      // 4. Editar platillo completo
+      grid.addEventListener('click', e => {
+        const btn = e.target.closest('.btn-edit-dish');
+        if (btn) openDishModal(btn.getAttribute('data-id'));
+      });
+
+      // 5. Eliminar platillo
+      grid.addEventListener('click', e => {
+        const btn = e.target.closest('.btn-delete-dish');
+        if (!btn) return;
+        const id = btn.getAttribute('data-id');
+        const it = STATE.menu.find(m => m.id === id);
+        if (!it) return;
+
+        openDialog({
+          title: '¿Eliminar platillo?',
+          message: `¿Estás seguro de que deseas eliminar "${it.name}" del menú? Los clientes ya no lo verán.`,
+          confirmText: 'Sí, eliminar',
+          isDanger: true,
+          onConfirm: () => {
+            STATE.menu = STATE.menu.filter(m => m.id !== id);
+            saveMenu();
+            renderDishes();
+            showToast(`Platillo "${it.name}" eliminado`, 'info');
+          }
+        });
+      });
+
+      // Restaurar Menú por Defecto
+      $('btn-reset-menu').addEventListener('click', () => {
+        openDialog({
+          title: '¿Restaurar catálogo inicial?',
+          message: 'Se restablecerán todos los platillos, precios y descripciones originales de la taquería.',
+          confirmText: 'Sí, restaurar',
+          isDanger: true,
+          onConfirm: () => {
+            STATE.menu = DEFAULT_CATALOG.map(d => ({ ...d }));
+            Storage.remove(STORAGE_KEYS.MENU);
+            Storage.remove(STORAGE_KEYS.PHOTOS);
+            saveMenu();
+            renderDishes();
+            showToast('Menú restablecido a valores iniciales', 'info');
+          }
+        });
+      });
+
+      // Agregar nuevo Slide de Carrusel
+      $('btn-save-new-slide').addEventListener('click', async () => {
+        const title = $('slide-new-title').value.trim();
+        const subtitle = $('slide-new-subtitle').value.trim();
+        const url = $('slide-new-url').value.trim();
+        const file = $('slide-new-file').files?.[0];
+        const err = $('slide-new-error');
+
+        if (!title) {
+          err.textContent = 'El título de la promoción es obligatorio.';
+          err.classList.remove('hidden');
+          return;
+        }
+
+        try {
+          let img = '';
+          if (file) img = await downscaleImage(file);
+          else if (url) img = await verifyUrl(url);
+          else {
+            err.textContent = 'Debes subir una foto o ingresar una URL.';
+            err.classList.remove('hidden');
+            return;
+          }
+
+          err.classList.add('hidden');
+          STATE.slides.push({
+            id: 's-' + Date.now().toString(36),
+            title,
+            subtitle,
+            image: img
+          });
+
+          savePhotos();
+          renderSlides();
+          $('slide-new-title').value = '';
+          $('slide-new-subtitle').value = '';
+          $('slide-new-url').value = '';
+          $('slide-new-file').value = '';
+          showToast('¡Banner promocional publicado!', 'success');
+        } catch(e) {
+          err.textContent = e.message;
+          err.classList.remove('hidden');
+        }
+      });
+
+      // Eliminar Slide de Carrusel
+      $('admin-slides-container').addEventListener('click', e => {
+        const btn = e.target.closest('.btn-delete-slide');
+        if (!btn) return;
+        const idx = parseInt(btn.getAttribute('data-index'), 10);
+        if (STATE.slides.length <= 1) {
+          showToast('Debe haber al menos 1 banner en el carrusel', 'error');
+          return;
+        }
+        STATE.slides.splice(idx, 1);
+        savePhotos();
+        renderSlides();
+        showToast('Banner eliminado', 'info');
+      });
+
+      // Restaurar Slides originales
+      $('btn-restore-slides').addEventListener('click', () => {
+        STATE.slides = [...DEFAULT_SLIDES];
+        savePhotos();
+        renderSlides();
+        showToast('Banners restaurados a originales', 'info');
+      });
+
+      // Guardar Configuración del Local
+      $('form-admin-settings').addEventListener('submit', saveSettingsFromForm);
+
+      // Timbre de Cocina (Paso 2)
+      $('btn-test-bell').addEventListener('click', playKitchenBell);
+
+      // Diálogo de Confirmación
+      $('dialog-confirm-btn').addEventListener('click', () => {
+        if (STATE.dialogCallback) STATE.dialogCallback();
+        closeDialog();
+      });
+      $('dialog-cancel-btn').addEventListener('click', closeDialog);
+      $('confirm-dialog').addEventListener('click', e => {
+        if (e.target === $('confirm-dialog')) closeDialog();
+      });
+
+      // Modal Dish Close backdrop
+      $('dish-modal').addEventListener('click', e => {
+        if (e.target === $('dish-modal')) closeDishModal();
+      });
+
+      // Sincronización en tiempo real entre pestañas (Storage Listener)
+      window.addEventListener('storage', e => {
+        if (e.key === STORAGE_KEYS.MENU || e.key === STORAGE_KEYS.PHOTOS || e.key === STORAGE_KEYS.CONFIG) {
+          loadData();
+          renderAllViews();
+        }
+      });
+    }
+
+    /* 15. ARRANQUE */
+    document.addEventListener('DOMContentLoaded', () => {
+      loadData();
+      initEvents();
+      checkPinScreen();
+    });
+  </script>
+</body>
+</html>
