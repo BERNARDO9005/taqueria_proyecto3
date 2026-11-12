@@ -1,9 +1,9 @@
 @echo off
 title Servidor Taqueria El Buen Taquito
 cd /d "%~dp0"
-echo Iniciando servidor en segundo plano en http://localhost:8000 ...
-powershell -Command "Start-Process python -ArgumentList '-m http.server 8000' -WorkingDirectory '%~dp0' -WindowStyle Hidden"
-timeout /t 2 /nobreak >nul
+echo Iniciando servidor local en http://localhost:8000 ...
+powershell -Command "Start-Process python -ArgumentList '-m http.server 8000 --bind 127.0.0.1' -WorkingDirectory '%~dp0' -WindowStyle Hidden"
+timeout /t 1 /nobreak >nul
 start http://localhost:8000
 echo.
 echo ========================================================
