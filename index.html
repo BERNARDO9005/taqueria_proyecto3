@@ -1203,13 +1203,33 @@
       const del = Storage.get(STORAGE_KEYS.DELIVERY) || {};
       const orderId = 'TBT-' + Math.floor(1000 + Math.random() * 9000);
       const order = {
-        id: orderId, createdAt: Date.now(), items: [...STATE.cart],
-        deliveryType: STATE.deliveryType, paymentMethod: STATE.paymentMethod,
-        total, deliveryInfo: del
+        id: orderId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        stage: 1,
+        status: 'new',
+        items: [...STATE.cart],
+        deliveryType: STATE.deliveryType,
+        paymentMethod: STATE.paymentMethod,
+        total,
+        deliveryInfo: del
       };
 
       STATE.activeOrder = order;
       Storage.set(STORAGE_KEYS.ORDER, order);
+
+      // Guardar en la cola compartida de órdenes para la cocina (admin.html)
+      const currentOrders = Storage.get(STORAGE_KEYS.ORDERS) || [];
+      currentOrders.unshift(order);
+      Storage.set(STORAGE_KEYS.ORDERS, currentOrders);
+
+      // Notificar por BroadcastChannel en tiempo real
+      if (clientOrdersChannel) {
+        try {
+          clientOrdersChannel.postMessage({ type: 'NEW_ORDER', order });
+        } catch(e) {}
+      }
+
       STATE.cart = [];
       Storage.set(STORAGE_KEYS.CART, []);
       renderCartDrawer();
