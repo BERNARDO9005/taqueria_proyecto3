@@ -326,9 +326,16 @@
         <button id="btn-close-tracker" class="w-6 h-6 rounded-full bg-white/5 hover:bg-white/10 text-text-muted hover:text-white flex items-center justify-center"><i class="fa-solid fa-xmark text-[10px]"></i></button>
       </div>
       <div class="flex-1 overflow-y-auto p-3.5 space-y-3">
-        <div class="p-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[10px] flex items-center justify-between">
-          <span><i class="fa-solid fa-info-circle mr-1"></i> Demo: el estado avanza automáticamente.</span>
-          <span id="tracker-elapsed" class="font-mono font-bold text-white">0s</span>
+        <div id="tracker-live-status-box" class="p-2 rounded-xl bg-accent/10 border border-accent/30 text-sky-200 text-[11px] flex items-center justify-between">
+          <span id="tracker-live-status-label" class="flex items-center gap-1.5 font-semibold">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400 -ml-3.5"></span>
+            <span>Sincronizado en vivo con la Cocina</span>
+          </span>
+          <span id="tracker-elapsed" class="font-mono font-bold text-white text-[11px]">0s</span>
+        </div>
+        <div id="tracker-cancel-box" class="hidden p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-200 text-xs text-center font-bold">
+          <i class="fa-solid fa-circle-xmark text-error mr-1"></i> Pedido cancelado por la taquería.
         </div>
         <div class="space-y-2.5" id="tracker-timeline">
           <div class="timeline-step flex items-start gap-2.5" data-stage="1">
