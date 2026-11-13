@@ -688,6 +688,8 @@
       ORDERS: 'taqueria:v1:orders'
     };
 
+    let clientOrdersChannel = null;
+
     const Storage = {
       get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e) { return null; } },
       set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e) { if(e.name === 'QuotaExceededError') showToast('Memoria llena. Intenta subir fotos de menor tamaño.', 'error'); return false; } },
@@ -2167,7 +2169,44 @@
       startCarousel();
       initEvents();
 
-      // Sincronización en tiempo real con admin.html
+      // Canal de comunicación en tiempo real con la cocina (admin.html)
+      try {
+        clientOrdersChannel = new BroadcastChannel('taqueria_orders_sync');
+        clientOrdersChannel.onmessage = (e) => {
+          const msg = e.data;
+          if (msg && msg.type === 'ORDER_UPDATED' && STATE.activeOrder && msg.order?.id === STATE.activeOrder.id) {
+            const oldStage = STATE.activeOrder.stage || 1;
+            STATE.activeOrder = { ...STATE.activeOrder, ...msg.order };
+            Storage.set(STORAGE_KEYS.ORDER, STATE.activeOrder);
+            
+            const stageTexts = {
+              2: '🔥 ¡Tus tacos ya están en el comal!',
+              3: STATE.activeOrder.deliveryType === 'delivery' ? '🛵 ¡Tu pedido va en camino a tu dirección!' : '🛎️ ¡Tu pedido está listo para recoger!',
+              4: '✅ ¡Tu pedido fue entregado! ¡Buen provecho!'
+            };
+            if (msg.order.stage && msg.order.stage !== oldStage && stageTexts[msg.order.stage]) {
+              showToast(stageTexts[msg.order.stage], 'success');
+            }
+
+            if ($('modal-tracker') && !$('modal-tracker').classList.contains('hidden')) {
+              runTrackerLoop();
+            } else {
+              updateTrackerBanner();
+            }
+          } else if (msg && msg.type === 'ORDER_CANCELLED' && STATE.activeOrder && msg.orderId === STATE.activeOrder.id) {
+            STATE.activeOrder.status = 'cancelled';
+            Storage.set(STORAGE_KEYS.ORDER, STATE.activeOrder);
+            showToast('⚠️ Tu pedido fue cancelado por la taquería', 'error');
+            if ($('modal-tracker') && !$('modal-tracker').classList.contains('hidden')) {
+              runTrackerLoop();
+            } else {
+              updateTrackerBanner();
+            }
+          }
+        };
+      } catch(e) {}
+
+      // Sincronización en tiempo real con admin.html (Storage Listener)
       window.addEventListener('storage', (e) => {
         if (e.key === STORAGE_KEYS.MENU || e.key === STORAGE_KEYS.PHOTOS || e.key === STORAGE_KEYS.CONFIG) {
           loadMenu();
@@ -2175,6 +2214,17 @@
           renderCategoryChips();
           renderMenu();
           renderCarousel();
+        }
+        if (e.key === STORAGE_KEYS.ORDER) {
+          const updated = Storage.get(STORAGE_KEYS.ORDER);
+          if (updated && STATE.activeOrder && updated.id === STATE.activeOrder.id) {
+            STATE.activeOrder = updated;
+            if ($('modal-tracker') && !$('modal-tracker').classList.contains('hidden')) {
+              runTrackerLoop();
+            } else {
+              updateTrackerBanner();
+            }
+          }
         }
       });
     });
