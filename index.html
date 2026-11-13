@@ -1298,19 +1298,31 @@
       function tick() {
         if (!STATE.activeOrder) return;
         const elapsed = Math.floor((Date.now() - STATE.activeOrder.createdAt) / 1000);
-        $('tracker-elapsed').textContent = elapsed + 's';
+        const elapsedStr = elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
+        const el = $('tracker-elapsed');
+        if (el) el.textContent = elapsedStr;
 
-        const stages = CONFIG.trackerStageSeconds;
-        let cur = 1;
-        if (elapsed >= stages[3]) cur = 4;
-        else if (elapsed >= stages[2]) cur = 3;
-        else if (elapsed >= stages[1]) cur = 2;
+        const isCancelled = STATE.activeOrder.status === 'cancelled';
+        const cancelBox = $('tracker-cancel-box');
+        const liveBox = $('tracker-live-status-box');
+        if (cancelBox && liveBox) {
+          cancelBox.classList.toggle('hidden', !isCancelled);
+          liveBox.classList.toggle('hidden', isCancelled);
+        }
+
+        // Estado real marcado por la cocina en admin.html
+        let cur = STATE.activeOrder.stage || 1;
+        if (isCancelled) cur = 0;
 
         $$('.timeline-step').forEach(st => {
           const n = parseInt(st.getAttribute('data-stage'), 10);
           const icon = st.querySelector('.step-icon'), num = st.querySelector('.num'), check = st.querySelector('.fa-check');
           const title = st.querySelector('.step-title');
-          if (n < cur) {
+          if (isCancelled) {
+            icon.className = 'step-icon w-7 h-7 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center font-bold text-text-muted text-xs opacity-30';
+            num.classList.remove('hidden'); check.classList.add('hidden');
+            title.className = 'font-bold text-text-muted step-title opacity-30';
+          } else if (n < cur) {
             icon.className = 'step-icon w-7 h-7 rounded-full bg-success/20 border-2 border-success text-success flex items-center justify-center font-bold text-xs';
             num.classList.add('hidden'); check.classList.remove('hidden');
             title.className = 'font-bold text-white step-title';
@@ -1334,8 +1346,12 @@
       const banner = $('tracker-banner');
       if (!STATE.activeOrder) { banner.classList.add('hidden'); return; }
       banner.classList.remove('hidden');
+      if (STATE.activeOrder.status === 'cancelled') {
+        $('tracker-banner-title').textContent = `${STATE.activeOrder.id} • Cancelado por cocina`;
+        return;
+      }
       const titles = ['Confirmado', 'En comal', STATE.activeOrder.deliveryType === 'delivery' ? 'En camino' : 'Listo p/ recoger', 'Entregado'];
-      const st = curStage || 1;
+      const st = curStage || STATE.activeOrder.stage || 1;
       $('tracker-banner-title').textContent = `${STATE.activeOrder.id} • ${titles[st - 1] || 'En proceso'}`;
     }
 
