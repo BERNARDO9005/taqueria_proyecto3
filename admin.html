@@ -2186,7 +2186,62 @@
       $('form-admin-settings').addEventListener('submit', saveSettingsFromForm);
 
       // Timbre de Cocina (Paso 2)
-      $('btn-test-bell').addEventListener('click', playKitchenBell);
+      $('btn-test-bell').addEventListener('click', () => {
+        getAudioContext();
+        playKitchenBell(false);
+      });
+
+      // Toggle Sonido de Cocina
+      $('btn-toggle-kitchen-sound')?.addEventListener('click', toggleKitchenAudio);
+
+      // Crear Pedido de Demostración
+      $('btn-create-demo-order')?.addEventListener('click', () => {
+        getAudioContext();
+        createDemoOrder();
+      });
+
+      // Limpiar Historial de Pedidos Finalizados
+      $('btn-clear-history')?.addEventListener('click', clearDeliveredOrders);
+
+      // Delegación de eventos en las columnas de cocina (Tablero KDS)
+      const kitchenSection = $('view-kitchen');
+      if (kitchenSection) {
+        kitchenSection.addEventListener('click', e => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.getAttribute('data-action');
+          const orderId = btn.getAttribute('data-id');
+          const nextStage = btn.getAttribute('data-next');
+
+          if (action === 'advance-stage') {
+            getAudioContext();
+            moveOrderStage(orderId, nextStage);
+          } else if (action === 'cancel-order') {
+            cancelOrder(orderId);
+          } else if (action === 'view-ticket') {
+            openTicketModal(orderId);
+          }
+        });
+      }
+
+      // Modal de Ticket / Comanda
+      $('btn-close-ticket-modal')?.addEventListener('click', closeTicketModal);
+      $('btn-close-ticket-modal-2')?.addEventListener('click', closeTicketModal);
+      $('btn-print-ticket')?.addEventListener('click', () => window.print());
+      $('kitchen-ticket-modal')?.addEventListener('click', e => {
+        if (e.target === $('kitchen-ticket-modal')) closeTicketModal();
+      });
+
+      // Desbloquear AudioContext al hacer clic en cualquier parte de la pantalla
+      document.addEventListener('click', () => getAudioContext(), { once: true });
+
+      // Refresco periódico de contadores de tiempo de cocina ("Hace Xm")
+      setInterval(() => {
+        const kitchenView = $('view-kitchen');
+        if (kitchenView && !kitchenView.classList.contains('hidden')) {
+          renderKitchen();
+        }
+      }, 15000);
 
       // Diálogo de Confirmación
       $('dialog-confirm-btn').addEventListener('click', () => {
@@ -2209,10 +2264,34 @@
           loadData();
           renderAllViews();
         }
+        if (e.key === STORAGE_KEYS.ORDERS || e.key === STORAGE_KEYS.ORDER) {
+          loadData();
+          renderKitchen();
+        }
       });
     }
 
-    /* 15. ARRANQUE */
+    /* 15. CANAL DE BROADCAST EN TIEMPO REAL (BroadcastChannel API) */
+    let ordersChannel = null;
+    try {
+      ordersChannel = new BroadcastChannel('taqueria_orders_sync');
+      ordersChannel.onmessage = (e) => {
+        const msg = e.data;
+        if (msg) {
+          if (msg.type === 'NEW_ORDER') {
+            loadData();
+            renderKitchen();
+            playKitchenBell(true);
+            showToast(`🔔 ¡Nuevo Pedido #${msg.order?.id || ''} recibido en Cocina!`, 'success');
+          } else if (msg.type === 'ORDER_UPDATED' || msg.type === 'ORDERS_CHANGED' || msg.type === 'ORDER_CANCELLED') {
+            loadData();
+            renderKitchen();
+          }
+        }
+      };
+    } catch(e) {}
+
+    /* 16. ARRANQUE */
     document.addEventListener('DOMContentLoaded', () => {
       loadData();
       initEvents();
