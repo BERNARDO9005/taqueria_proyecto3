@@ -1002,8 +1002,37 @@
         CONFIG = { ...DEFAULT_CONFIG };
       }
 
+      // Órdenes de Cocina
+      const savedOrders = Storage.get(STORAGE_KEYS.ORDERS);
+      if (Array.isArray(savedOrders)) {
+        STATE.orders = savedOrders;
+      } else {
+        const singleOrder = Storage.get(STORAGE_KEYS.ORDER);
+        if (singleOrder && singleOrder.id) {
+          if (!singleOrder.stage) singleOrder.stage = 1;
+          STATE.orders = [singleOrder];
+          Storage.set(STORAGE_KEYS.ORDERS, STATE.orders);
+        } else {
+          STATE.orders = [];
+        }
+      }
+
+      // Configuración de Audio de Cocina
+      const audioSetting = Storage.get(STORAGE_KEYS.KITCHEN_AUDIO);
+      STATE.kitchenAudio = (audioSetting !== false);
+      updateKitchenAudioBtnUI();
+
       // Actualizar Título
       $('admin-header-title').textContent = CONFIG.name;
+    }
+
+    function saveOrders(broadcast = true) {
+      Storage.set(STORAGE_KEYS.ORDERS, STATE.orders);
+      if (broadcast && ordersChannel) {
+        try {
+          ordersChannel.postMessage({ type: 'ORDERS_CHANGED', timestamp: Date.now() });
+        } catch(e) {}
+      }
     }
 
     function saveMenu() {
@@ -1339,11 +1368,465 @@
       $('dish-modal').classList.add('hidden');
     }
 
+    /* 12. COMANDERA / COCINA EN VIVO (PASO 2) */
+    function formatTimeAgo(ts) {
+      if (!ts) return 'Reciente';
+      const sec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+      if (sec < 60) return `Hace ${sec}s`;
+      const min = Math.floor(sec / 60);
+      if (min < 60) return `Hace ${min}m`;
+      const hr = Math.floor(min / 60);
+      return `Hace ${hr}h ${min % 60}m`;
+    }
+
+    function renderKitchen() {
+      if (!Array.isArray(STATE.orders)) STATE.orders = [];
+
+      const colNew = $('kitchen-list-new');
+      const colPrep = $('kitchen-list-preparing');
+      const colReady = $('kitchen-list-ready');
+      const colDelivered = $('kitchen-list-delivered');
+
+      if (!colNew || !colPrep || !colReady || !colDelivered) return;
+
+      const newOrders = STATE.orders.filter(o => !o.stage || o.stage === 1);
+      const prepOrders = STATE.orders.filter(o => o.stage === 2);
+      const readyOrders = STATE.orders.filter(o => o.stage === 3);
+      const deliveredOrders = STATE.orders.filter(o => o.stage === 4);
+
+      // Actualizar contadores y badges
+      if ($('badge-col-new')) $('badge-col-new').textContent = newOrders.length;
+      if ($('badge-col-preparing')) $('badge-col-preparing').textContent = prepOrders.length;
+      if ($('badge-col-ready')) $('badge-col-ready').textContent = readyOrders.length;
+      if ($('badge-col-delivered')) $('badge-col-delivered').textContent = deliveredOrders.length;
+
+      if ($('kpi-orders-new')) $('kpi-orders-new').textContent = newOrders.length;
+      if ($('kpi-orders-preparing')) $('kpi-orders-preparing').textContent = prepOrders.length;
+      if ($('kpi-orders-ready')) $('kpi-orders-ready').textContent = readyOrders.length;
+
+      // Calcular ventas del turno (solo órdenes finalizadas)
+      const salesSum = deliveredOrders.reduce((acc, o) => acc + (o.total || 0), 0);
+      if ($('kpi-kitchen-sales')) $('kpi-kitchen-sales').textContent = formatMoney(salesSum);
+
+      // Badge en la pestaña de navegación
+      const totalPending = newOrders.length + prepOrders.length;
+      const tabBadge = $('kitchen-badge-count');
+      if (tabBadge) {
+        tabBadge.textContent = totalPending;
+        tabBadge.classList.toggle('hidden', totalPending === 0);
+      }
+
+      // Renderizar columnas
+      renderKitchenColumnList(colNew, newOrders, 1);
+      renderKitchenColumnList(colPrep, prepOrders, 2);
+      renderKitchenColumnList(colReady, readyOrders, 3);
+      renderKitchenColumnList(colDelivered, deliveredOrders, 4);
+    }
+
+    function renderKitchenColumnList(container, list, stage) {
+      if (!list || list.length === 0) {
+        const emptyLabels = {
+          1: { icon: 'fa-inbox text-blue-400/40', text: 'Sin pedidos nuevos por atender' },
+          2: { icon: 'fa-fire text-amber-400/40', text: 'El comal está despejado' },
+          3: { icon: 'fa-motorcycle text-purple-400/40', text: 'Sin pedidos listos por entregar' },
+          4: { icon: 'fa-receipt text-emerald-400/40', text: 'Aún no hay pedidos finalizados hoy' }
+        };
+        const e = emptyLabels[stage] || { icon: 'fa-circle', text: 'Vacío' };
+        container.innerHTML = `
+          <div class="p-8 text-center text-text-muted/60 text-xs italic flex flex-col items-center justify-center gap-2">
+            <i class="fa-solid ${e.icon} text-2xl"></i>
+            <span>${e.text}</span>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = list.map(order => createKitchenOrderCardHtml(order, stage)).join('');
+    }
+
+    function createKitchenOrderCardHtml(order, stage) {
+      const timeStr = formatTimeAgo(order.createdAt);
+      
+      let typeBadge = '';
+      if (order.deliveryType === 'table' || order.deliveryInfo?.tableNumber) {
+        typeBadge = `<span class="px-2 py-0.5 rounded-full bg-gold/20 text-gold border border-gold/30 text-[10px] font-black"><i class="fa-solid fa-chair mr-1"></i>Mesa ${escapeHtml(order.deliveryInfo?.tableNumber || '1')}</span>`;
+      } else if (order.deliveryType === 'pickup') {
+        typeBadge = `<span class="px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30 text-[10px] font-bold"><i class="fa-solid fa-bag-shopping mr-1"></i>Para Llevar</span>`;
+      } else {
+        typeBadge = `<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold"><i class="fa-solid fa-motorcycle mr-1"></i>Domicilio</span>`;
+      }
+
+      const payBadge = order.paymentMethod === 'card'
+        ? `<span class="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/20 text-[9px] font-semibold"><i class="fa-solid fa-credit-card mr-1"></i>Tarjeta</span>`
+        : `<span class="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/20 text-[9px] font-semibold"><i class="fa-solid fa-money-bill-wave mr-1"></i>Efectivo</span>`;
+
+      let itemsHtml = '';
+      (order.items || []).forEach(l => {
+        const it = STATE.menu.find(m => m.id === l.itemId) || { name: 'Platillo' };
+        
+        let optTxt = [];
+        if (l.options) {
+          if (l.options.tortilla) optTxt.push(`Tortilla ${l.options.tortilla}`);
+          if (l.options.tortillaFixed) optTxt.push(l.options.tortillaFixed);
+          if (l.options.salsa) optTxt.push(l.options.salsa.replace('salsa-', 'Salsa '));
+          if (l.options.extraCheese) optTxt.push('+ Queso extra');
+          if (l.options.meat) optTxt.push(`Carne: ${l.options.meat}`);
+          if (l.options.flavor) optTxt.push(`Sabor: ${l.options.flavor}`);
+        }
+        const optHtml = optTxt.length ? `<div class="text-[10px] text-text-muted mt-0.5">${escapeHtml(optTxt.join(' • '))}</div>` : '';
+        const notesHtml = l.notes ? `<div class="mt-1 text-[11px] text-gold font-medium bg-gold/10 px-2 py-0.5 rounded-md border border-gold/20 flex items-start gap-1"><i class="fa-solid fa-note-sticky text-[10px] mt-0.5 shrink-0"></i><span>${escapeHtml(l.notes)}</span></div>` : '';
+
+        itemsHtml += `
+          <div class="py-1.5 border-b border-white/5 last:border-0">
+            <div class="flex items-center justify-between text-xs">
+              <div class="flex items-center gap-1.5 font-bold text-white">
+                <span class="px-1.5 py-0.2 rounded bg-primary/30 text-sky-300 font-mono text-[11px] font-black">${l.quantity}x</span>
+                <span>${escapeHtml(it.name)}</span>
+              </div>
+              <span class="text-[11px] text-text-muted font-mono">${formatMoney(l.totalPrice || (l.unitPrice * l.quantity))}</span>
+            </div>
+            ${optHtml}
+            ${notesHtml}
+          </div>
+        `;
+      });
+
+      const clientName = order.deliveryInfo?.name ? escapeHtml(order.deliveryInfo.name) : 'Cliente Mostrador';
+      const clientPhone = order.deliveryInfo?.phone ? escapeHtml(order.deliveryInfo.phone) : '';
+      let addressHtml = '';
+      if (order.deliveryType === 'delivery' && order.deliveryInfo?.street) {
+        const fullAddr = `${order.deliveryInfo.street} ${order.deliveryInfo.numExt || ''}, ${order.deliveryInfo.colonia || ''}`;
+        addressHtml = `
+          <div class="text-[10px] text-text-muted flex items-start gap-1 pt-1">
+            <i class="fa-solid fa-location-dot text-emerald-400 mt-0.5 shrink-0"></i>
+            <span class="truncate">${escapeHtml(fullAddr)}</span>
+          </div>
+        `;
+      }
+
+      let actionsHtml = '';
+      if (stage === 1) {
+        actionsHtml = `
+          <div class="pt-2 flex items-center gap-2">
+            <button type="button" data-action="cancel-order" data-id="${order.id}" class="px-2.5 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-bold transition-colors" title="Rechazar / Cancelar">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+            <button type="button" data-action="advance-stage" data-id="${order.id}" data-next="2" class="flex-1 btn-gold py-2 text-xs font-black shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95">
+              <i class="fa-solid fa-fire"></i> Poner al Comal
+            </button>
+          </div>
+        `;
+      } else if (stage === 2) {
+        const btnLabel = (order.deliveryType === 'delivery') ? 'Listo / Despachar' : 'Listo p/ Entrega';
+        actionsHtml = `
+          <div class="pt-2 flex items-center gap-2">
+            <button type="button" data-action="advance-stage" data-id="${order.id}" data-next="1" class="px-2.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-text-muted hover:text-white text-xs" title="Regresar a Nuevos">
+              <i class="fa-solid fa-rotate-left"></i>
+            </button>
+            <button type="button" data-action="advance-stage" data-id="${order.id}" data-next="3" class="flex-1 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95">
+              <i class="fa-solid fa-bell-concierge"></i> ${btnLabel}
+            </button>
+          </div>
+        `;
+      } else if (stage === 3) {
+        actionsHtml = `
+          <div class="pt-2 flex items-center gap-2">
+            <button type="button" data-action="advance-stage" data-id="${order.id}" data-next="2" class="px-2.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-text-muted hover:text-white text-xs" title="Regresar al Comal">
+              <i class="fa-solid fa-rotate-left"></i>
+            </button>
+            <button type="button" data-action="advance-stage" data-id="${order.id}" data-next="4" class="flex-1 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95">
+              <i class="fa-solid fa-circle-check"></i> Entregado y Cobrado
+            </button>
+          </div>
+        `;
+      } else {
+        actionsHtml = `
+          <div class="pt-2 flex items-center justify-between text-xs border-t border-white/5">
+            <button type="button" data-action="view-ticket" data-id="${order.id}" class="text-accent hover:underline text-[11px] font-semibold flex items-center gap-1">
+              <i class="fa-solid fa-receipt"></i> Ver Ticket
+            </button>
+            <button type="button" data-action="advance-stage" data-id="${order.id}" data-next="3" class="text-text-muted hover:text-white text-[10px] flex items-center gap-1" title="Reabrir a Listos">
+              <i class="fa-solid fa-rotate-left"></i> Reabrir
+            </button>
+          </div>
+        `;
+      }
+
+      const pulseBorder = (stage === 1) ? 'ring-2 ring-accent/40 animate-pulse' : '';
+
+      return `
+        <div class="kitchen-card p-3.5 rounded-2xl bg-bg-card/90 border border-white/10 shadow-lg space-y-2.5 transition-all hover:border-white/20 ${pulseBorder}">
+          <!-- Encabezado de Tarjeta -->
+          <div class="flex items-center justify-between gap-2 border-b border-white/5 pb-2">
+            <div>
+              <div class="flex items-center gap-1.5 font-black text-white text-sm">
+                <span>#${escapeHtml(order.id)}</span>
+                ${typeBadge}
+              </div>
+              <p class="text-[10px] text-text-muted flex items-center gap-1 mt-0.5">
+                <i class="fa-regular fa-clock text-[9px]"></i>
+                <span class="font-mono">${timeStr}</span>
+              </p>
+            </div>
+            <div class="text-right">
+              ${payBadge}
+              <p class="text-xs font-black text-gold mt-1 font-mono">${formatMoney(order.total)}</p>
+            </div>
+          </div>
+
+          <!-- Cliente -->
+          <div class="text-[11px] text-text">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-white truncate">${clientName}</span>
+              ${clientPhone ? `<a href="https://wa.me/52${clientPhone}" target="_blank" class="text-emerald-400 hover:underline text-[10px] flex items-center gap-1 shrink-0"><i class="fa-brands fa-whatsapp"></i> ${clientPhone}</a>` : ''}
+            </div>
+            ${addressHtml}
+          </div>
+
+          <!-- Platillos -->
+          <div class="bg-slate-950/40 rounded-xl p-2.5 border border-white/5 max-h-48 overflow-y-auto no-sb">
+            ${itemsHtml}
+          </div>
+
+          <!-- Acciones -->
+          ${actionsHtml}
+        </div>
+      `;
+    }
+
+    function moveOrderStage(orderId, nextStage) {
+      const idx = STATE.orders.findIndex(o => o.id === orderId);
+      if (idx === -1) return;
+      const ord = STATE.orders[idx];
+      ord.stage = parseInt(nextStage, 10);
+      ord.updatedAt = Date.now();
+      const statusMap = { 1: 'new', 2: 'preparing', 3: 'ready', 4: 'delivered' };
+      ord.status = statusMap[ord.stage] || 'new';
+
+      saveOrders(true);
+
+      const activeSingle = Storage.get(STORAGE_KEYS.ORDER);
+      if (activeSingle && activeSingle.id === ord.id) {
+        activeSingle.stage = ord.stage;
+        activeSingle.status = ord.status;
+        activeSingle.updatedAt = ord.updatedAt;
+        Storage.set(STORAGE_KEYS.ORDER, activeSingle);
+      }
+
+      if (ordersChannel) {
+        try {
+          ordersChannel.postMessage({ type: 'ORDER_UPDATED', order: ord });
+        } catch(e) {}
+      }
+
+      renderKitchen();
+
+      const stageNames = { 1: 'Recibido', 2: 'En el Comal', 3: 'Listo / En Camino', 4: 'Finalizado' };
+      showToast(`Comanda #${ord.id}: ${stageNames[ord.stage]}`, 'success');
+    }
+
+    function cancelOrder(orderId) {
+      openDialog({
+        title: `¿Rechazar Comanda #${orderId}?`,
+        message: 'Esta comanda se cancelará y se notificará al cliente.',
+        confirmText: 'Sí, cancelar pedido',
+        onConfirm: () => {
+          const idx = STATE.orders.findIndex(o => o.id === orderId);
+          if (idx !== -1) {
+            const ord = STATE.orders[idx];
+            ord.status = 'cancelled';
+            ord.stage = 0;
+            ord.updatedAt = Date.now();
+            STATE.orders.splice(idx, 1);
+            saveOrders(true);
+
+            const activeSingle = Storage.get(STORAGE_KEYS.ORDER);
+            if (activeSingle && activeSingle.id === orderId) {
+              activeSingle.status = 'cancelled';
+              activeSingle.stage = 0;
+              Storage.set(STORAGE_KEYS.ORDER, activeSingle);
+            }
+
+            if (ordersChannel) {
+              try {
+                ordersChannel.postMessage({ type: 'ORDER_CANCELLED', orderId });
+              } catch(e) {}
+            }
+
+            renderKitchen();
+            showToast(`Pedido #${orderId} cancelado`, 'info');
+          }
+        }
+      });
+    }
+
+    function clearDeliveredOrders() {
+      const deliveredCount = STATE.orders.filter(o => o.stage === 4).length;
+      if (deliveredCount === 0) {
+        showToast('No hay pedidos finalizados para limpiar', 'info');
+        return;
+      }
+      openDialog({
+        title: '¿Limpiar historial finalizado?',
+        message: `Se removerán ${deliveredCount} órdenes finalizadas del tablero de cocina.`,
+        confirmText: 'Limpiar Historial',
+        onConfirm: () => {
+          STATE.orders = STATE.orders.filter(o => o.stage !== 4);
+          saveOrders(true);
+          renderKitchen();
+          showToast('Historial de cocina limpiado', 'info');
+        }
+      });
+    }
+
+    function createDemoOrder() {
+      const sampleNames = ['Carlos Mendoza', 'Sofía Ramírez', 'Mateo Morales', 'Valeria Castillo', 'Alejandro Cruz'];
+      const sampleTypes = ['table', 'pickup', 'delivery'];
+      const type = sampleTypes[Math.floor(Math.random() * sampleTypes.length)];
+      const randomName = sampleNames[Math.floor(Math.random() * sampleNames.length)];
+      const randomTable = Math.floor(1 + Math.random() * 8);
+
+      const demoItems = [
+        {
+          id: 'line-' + Date.now().toString(36),
+          itemId: 'taco-pastor',
+          quantity: 4,
+          unitPrice: 2800,
+          totalPrice: 11200,
+          options: { tortilla: 'Maíz', salsa: 'Salsa verde' },
+          notes: 'Con todo (cebolla y cilantro), bien doradito'
+        },
+        {
+          id: 'line-' + (Date.now() + 1).toString(36),
+          itemId: 'gringa-pastor',
+          quantity: 2,
+          unitPrice: 6500,
+          totalPrice: 13000,
+          options: { tortillaFixed: 'Harina', extraCheese: true },
+          notes: 'Sin cebolla, limón aparte'
+        },
+        {
+          id: 'line-' + (Date.now() + 2).toString(36),
+          itemId: 'agua-horchata',
+          quantity: 2,
+          unitPrice: 3500,
+          totalPrice: 7000,
+          options: {},
+          notes: 'Con bastante hielo'
+        }
+      ];
+
+      const deliveryExtra = (type === 'delivery') ? (CONFIG.deliveryFee || 2500) : 0;
+      const total = demoItems.reduce((acc, it) => acc + it.totalPrice, 0) + deliveryExtra;
+      const orderId = 'TBT-' + Math.floor(1000 + Math.random() * 9000);
+
+      const order = {
+        id: orderId,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        stage: 1,
+        status: 'new',
+        deliveryType: type,
+        paymentMethod: Math.random() > 0.4 ? 'cash' : 'card',
+        total,
+        deliveryInfo: {
+          name: randomName,
+          phone: '55' + Math.floor(10000000 + Math.random() * 90000000),
+          tableNumber: String(randomTable),
+          street: 'Av. Insurgentes Sur',
+          numExt: '350',
+          colonia: 'Roma Norte',
+          notes: 'Timbre blanco, departamento 4B'
+        },
+        items: demoItems
+      };
+
+      STATE.orders.unshift(order);
+      saveOrders(true);
+      renderKitchen();
+      playKitchenBell(true);
+      showToast(`🔔 ¡Nuevo Pedido Demo #${order.id} creado!`, 'success');
+    }
+
+    function openTicketModal(orderId) {
+      const ord = STATE.orders.find(o => o.id === orderId);
+      if (!ord) return;
+      STATE.activeTicketOrder = ord;
+
+      $('ticket-modal-folio').textContent = `Folio #${ord.id}`;
+      const d = new Date(ord.createdAt);
+      const dateStr = d.toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+      let itemsRows = '';
+      (ord.items || []).forEach(it => {
+        const itemInfo = STATE.menu.find(m => m.id === it.itemId) || { name: 'Platillo' };
+        let optTxt = [];
+        if (it.options) {
+          if (it.options.tortilla) optTxt.push(it.options.tortilla);
+          if (it.options.extraCheese) optTxt.push('+Queso');
+          if (it.options.salsa) optTxt.push(it.options.salsa);
+        }
+        itemsRows += `
+          <div class="flex justify-between py-1 border-b border-dashed border-white/10">
+            <div>
+              <span class="font-bold text-white">${it.quantity}x ${escapeHtml(itemInfo.name)}</span>
+              ${optTxt.length ? `<p class="text-[10px] text-text-muted">${escapeHtml(optTxt.join(', '))}</p>` : ''}
+              ${it.notes ? `<p class="text-[10px] text-gold italic">Obs: ${escapeHtml(it.notes)}</p>` : ''}
+            </div>
+            <span class="font-bold text-white font-mono">${formatMoney(it.totalPrice || (it.unitPrice * it.quantity))}</span>
+          </div>
+        `;
+      });
+
+      const body = $('ticket-modal-body');
+      body.innerHTML = `
+        <div class="text-center pb-3 border-b border-dashed border-white/20 space-y-1">
+          <h3 class="text-sm font-black text-gold uppercase">${escapeHtml(CONFIG.name)}</h3>
+          <p class="text-[10px] text-text-muted">${escapeHtml(CONFIG.address)}</p>
+          <p class="text-[10px] text-text-muted">Tel: ${escapeHtml(CONFIG.phone)}</p>
+          <p class="text-[10px] text-white font-mono mt-1">${dateStr}</p>
+        </div>
+
+        <div class="space-y-1 py-2 border-b border-dashed border-white/20 text-[10px]">
+          <div class="flex justify-between"><span class="text-text-muted">Orden:</span><span class="font-bold text-white">#${ord.id}</span></div>
+          <div class="flex justify-between"><span class="text-text-muted">Tipo:</span><span class="font-bold text-white">${ord.deliveryType === 'delivery' ? 'A Domicilio' : (ord.deliveryType === 'table' ? `Mesa ${ord.deliveryInfo?.tableNumber || '1'}` : 'Para Llevar')}</span></div>
+          <div class="flex justify-between"><span class="text-text-muted">Cliente:</span><span class="font-bold text-white">${escapeHtml(ord.deliveryInfo?.name || 'Cliente')}</span></div>
+          ${ord.deliveryInfo?.phone ? `<div class="flex justify-between"><span class="text-text-muted">Tel:</span><span class="font-bold text-white">${escapeHtml(ord.deliveryInfo.phone)}</span></div>` : ''}
+          ${ord.deliveryType === 'delivery' && ord.deliveryInfo?.street ? `<div class="flex justify-between"><span class="text-text-muted">Dirección:</span><span class="font-bold text-white text-right max-w-[200px]">${escapeHtml(ord.deliveryInfo.street)} ${escapeHtml(ord.deliveryInfo.numExt || '')}</span></div>` : ''}
+          <div class="flex justify-between"><span class="text-text-muted">Pago:</span><span class="font-bold text-white">${ord.paymentMethod === 'card' ? 'Tarjeta (Pagado)' : 'Efectivo'}</span></div>
+        </div>
+
+        <div class="space-y-1 pt-1">
+          <p class="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">Detalle de Comanda:</p>
+          ${itemsRows}
+        </div>
+
+        <div class="pt-3 border-t-2 border-dashed border-white/20 space-y-1">
+          <div class="flex justify-between text-xs font-black text-white">
+            <span>TOTAL:</span>
+            <span class="text-gold text-sm font-mono">${formatMoney(ord.total)}</span>
+          </div>
+        </div>
+
+        <div class="text-center pt-2 text-[10px] text-text-muted italic">
+          ¡Gracias por su preferencia!
+        </div>
+      `;
+
+      $('kitchen-ticket-modal').classList.remove('hidden');
+    }
+
+    function closeTicketModal() {
+      $('kitchen-ticket-modal').classList.add('hidden');
+      STATE.activeTicketOrder = null;
+    }
+
     /* 13. RENDERIZAR TODAS LAS VISTAS */
     function renderAllViews() {
       renderDishes();
       renderSlides();
       populateSettingsForm();
+      renderKitchen();
     }
 
     /* 14. INICIALIZACIÓN DE EVENTOS */
@@ -1404,6 +1887,7 @@
             if (other.id === t.id) {
               btn.className = 'admin-tab-btn px-3.5 py-2 rounded-xl bg-primary text-white flex items-center gap-2 shrink-0 transition-all shadow-md';
               view.classList.remove('hidden');
+              if (t.id === 'nav-tab-kitchen') renderKitchen();
             } else {
               btn.className = 'admin-tab-btn px-3.5 py-2 rounded-xl text-text-muted hover:text-white hover:bg-white/5 flex items-center gap-2 shrink-0 transition-all';
               view.classList.add('hidden');
